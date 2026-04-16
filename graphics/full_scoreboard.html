@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>Full Scorecard - Crystal Glassy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700;900&family=Roboto+Condensed:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <style>
+        :root {
+            --primary-navy: #0e0423;
+            --primary-navy-deep: #08021a;
+            --accent-cyan: #00bef1;
+            --accent-pink: #ed008c;
+            --accent-yellow: #fded00;
+            --text-white: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.7);
+            --font-display: 'Oswald', sans-serif;
+            --font-body: 'Roboto Condensed', sans-serif;
+            --font-mono: 'Roboto Mono', monospace;
+            --master-grad: linear-gradient(180deg, rgba(237, 0, 140, 0.45) 0%, rgba(77, 3, 167, 0.2) 100%);
+            --crystal-border-strong: rgba(255, 255, 255, 0.42);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+        body {
+            width: 100vw; height: 100vh; overflow: hidden; background: transparent;
+            display: flex; justify-content: center; align-items: center; font-family: var(--font-body);
+        }
+
+        #scorecard-master {
+            background: var(--primary-navy); background-image: var(--master-grad); position: relative;
+            width: 1000px; border: 1px solid rgba(255,255,255,0.2); border-left: 4px solid var(--accent-pink);
+            border-top: 1px solid var(--crystal-border-strong); display: flex; flex-direction: column; opacity: 0;
+            box-shadow: 0 30px 90px rgba(0,0,0,0.8); backdrop-filter: blur(12px) saturate(1.5);
+        }
+
+        .sc-header {
+            background: linear-gradient(90deg, var(--accent-pink) 0%, #ff30a1 100%);
+            height: 45px; display: flex; align-items: center; justify-content: space-between;
+            padding: 0 20px; border-bottom: 2px solid var(--accent-cyan);
+        }
+
+        .sc-header-title { font-family: var(--font-display); font-size: 22px; color: #fff; text-transform: uppercase; letter-spacing: 2px; }
+        .sc-total-score { font-family: var(--font-display); font-size: 26px; color: #fff; }
+
+        .sc-grid-wrapper { flex: 1; display: flex; flex-direction: column; position: relative; padding-bottom: 5px; }
+        .sc-table-head { display: grid; grid-template-columns: 240px 300px 60px 60px 60px 60px 100px; background: rgba(0,0,0,0.4); padding: 0 15px; height: 40px; }
+        .sc-th { font-size: 13px; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; display: flex; align-items: center; justify-content: center; }
+        .sc-th:first-child, .sc-th:nth-child(2) { justify-content: flex-start; padding-left: 10px; }
+
+        #sc-rows-container { display: flex; flex-direction: column; }
+        .sc-player-row {
+            display: grid; grid-template-columns: 240px 300px 60px 60px 60px 60px 100px;
+            padding: 0 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); height: 42px; opacity: 0;
+        }
+        .sc-player-row.active { background: rgba(237, 0, 140, 0.1); border-left: 3px solid var(--accent-yellow); }
+        .sc-player-row > div { display: flex; align-items: center; justify-content: center; font-size: 16px; color: #fff; }
+        
+        .sc-p-name { font-family: var(--font-display); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; justify-content: flex-start !important; padding-left: 10px; }
+        .sc-p-how-out { font-size: 13px; color: var(--text-muted); justify-content: flex-start !important; padding-left: 10px; font-style: italic; }
+        .sc-stat-val { font-family: var(--font-mono); }
+        .sc-stat-val.highlight { color: var(--accent-yellow); font-weight: 700; font-size: 18px; }
+
+        .sc-footer {
+            height: 40px; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center;
+            justify-content: space-between; padding: 0 25px; border-top: 1px solid rgba(0,190,241,0.3);
+        }
+        .sc-extras { font-size: 14px; font-weight: 700; color: #fff; text-transform: uppercase; }
+        .sc-extras span { color: var(--accent-yellow); }
+    </style>
+</head>
+
+<body>
+    <div class="broadcast-canvas">
+        <div id="scorecard-master">
+            <div class="sc-header">
+                <div class="sc-header-title" id="sc-team-name">INDIA INNINGS</div>
+                <div class="sc-total-score" id="sc-score">0 - 0 (0.0 ov)</div>
+            </div>
+
+            <div class="sc-grid-wrapper">
+                <div class="sc-table-head">
+                    <div class="sc-th">Batsman</div>
+                    <div class="sc-th">Dismissal</div>
+                    <div class="sc-th">R</div>
+                    <div class="sc-th">B</div>
+                    <div class="sc-th">4s</div>
+                    <div class="sc-th">6s</div>
+                    <div class="sc-th">SR</div>
+                </div>
+                <div id="sc-rows-container"></div>
+            </div>
+
+            <div class="sc-footer">
+                <div class="sc-extras" id="sc-extras">EXTRAS: <span>0</span></div>
+                <div style="color:rgba(255,255,255,0.4); font-size:11px; text-transform:uppercase;">Crystal Scorecard &bull; Live Coverage</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.show = function(data) {
+            if (data) window.updateGraphic(data);
+            const tl = gsap.timeline();
+            gsap.set("#scorecard-master", { scaleX:0.9, opacity:0, y: 50 });
+            tl.to("#scorecard-master", { duration: 1, scaleX:1, opacity: 1, y: 0, ease: "expo.out" })
+              .to(".sc-player-row", { duration: 0.4, opacity: 1, stagger: 0.05, ease: "power2.out" }, "-=0.5");
+        };
+
+        window.hide = function() {
+            gsap.to("#scorecard-master", { opacity:0, y: 50, scaleX: 0.9, duration: 0.6 });
+        };
+
+        window.updateGraphic = function(data) {
+            if (!data || !data.batting) return;
+            
+            const container = document.getElementById('sc-rows-container');
+            container.innerHTML = '';
+            
+            if (data.teamName) document.getElementById('sc-team-name').textContent = data.teamName + " INNINGS";
+
+            data.batting.forEach(b => {
+                const row = document.createElement('div');
+                row.className = `sc-player-row ${b.status === 1 ? 'active' : ''}`;
+                row.innerHTML = `
+                    <div class="sc-p-name">${b.playerName} ${b.status === 1 ? '*' : ''}</div>
+                    <div class="sc-p-how-out">${b.dismissal}</div>
+                    <div class="sc-stat-val highlight">${b.runs}</div>
+                    <div class="sc-stat-val">${b.balls}</div>
+                    <div class="sc-stat-val" style="opacity:0.6">${b.fours}</div>
+                    <div class="sc-stat-val" style="opacity:0.6">${b.sixes}</div>
+                    <div class="sc-stat-val">${parseFloat(b.strikeRate).toFixed(1)}</div>
+                `;
+                container.appendChild(row);
+            });
+
+            const sc = data.scoreboard || {};
+            document.getElementById('sc-score').textContent = `${sc.total_run || 0} - ${sc.total_wickets || 0} (${sc.currentOverNumber || 0}.${sc.ball_index || 0} ov)`;
+            document.getElementById('sc-extras').innerHTML = `EXTRAS: <span>${sc.total_extra || 0}</span>`;
+            
+            if (window.getComputedStyle(document.getElementById('scorecard-master')).opacity > 0) {
+                gsap.set(".sc-player-row", { opacity: 1 });
+            }
+        };
+
+        window.onload = async () => {
+            let matchId = new URLSearchParams(window.location.search).get('matchId') || 4;
+            try {
+                const res = await fetch(`http://localhost:3000/api/graphics/phase1/full-scoreboard/${matchId}`);
+                if (res.ok) {
+                    const json = await res.json();
+                    window.updateGraphic(json.data || json);
+                }
+            } catch (e) {}
+            window.show();
+        };
+    </script>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io('http://localhost:3000');
+        socket.on('graphic_event', (p) => {
+            if (p.graphic === 'full_scoreboard') {
+                if (p.type === 'show' || p.type === 'update') {
+                    window.updateGraphic(p.data);
+                    if (window.getComputedStyle(document.getElementById('scorecard-master')).opacity == 0) window.show(p.data);
+                } else if (p.type === 'hide') window.hide();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>Head to Head - ICC Broadcast Pro</title>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700;900&family=Roboto+Condensed:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <style>
+        :root {
+            --primary-navy: #0e0423;
+            --primary-navy-deep: #08021a;
+            --accent-cyan: #00bef1;
+            --accent-pink: #ed008c; /* CORRECT MAGENTA BRAND COLOR */
+            --accent-yellow: #fded00;
+            --text-white: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.75);
+            --font-display: 'Oswald', sans-serif;
+            --font-body: 'Roboto Condensed', sans-serif;
+            --font-mono: 'Roboto Mono', monospace;
+            --glass-shine: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --glass-bg: rgba(0, 0, 0, 0.55);
+            --geo-texture: url("data:image/svg+xml,%3Csvg width='400' height='400' viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 100 Q 100 50 200 100 T 400 100 M0 200 Q 100 150 200 200 T 400 200 M0 300 Q 100 250 200 300 T 400 300' fill='none' stroke='white' stroke-width='0.8' opacity='0.25'/%3E%3C/svg%3E");
+            /* EXACT USER GRADIENT (SYNCED TO MAGENTA ACCENT) */
+            --master-grad: linear-gradient(180deg, rgba(237, 0, 140, 0.45) 0%, rgba(77, 3, 167, 0.2) 100%);
+
+            /* ── CRYSTAL ADDITIONS ── */
+            --crystal-border-strong: rgba(255, 255, 255, 0.42);
+            --crystal-shine-top: rgba(255, 255, 255, 0.18);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            background: transparent;
+            font-family: var(--font-body);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 54px 0 115px;
+            /* keep above bottom scoreboard/lower-third */
+            box-sizing: border-box;
+            margin: 0;
+        }
+
+        /* COMPACT CONTAINER: Matches final.html Sizing Exactly */
+        #h2h-graphic {
+            width: 990px;
+            height: 420px;
+            background-color: var(--primary-navy-deep);
+            border: 1px solid var(--glass-border);
+            border-left: 4px solid var(--accent-pink);
+            border-top: 1px solid var(--crystal-border-strong);
+            display: flex;
+            flex-direction: column;
+            position: relative; 
+            opacity: 0;
+            overflow: hidden;
+
+            /* crystal: richer shadow stack */
+            box-shadow:
+                0 0 0 1px rgba(237, 0, 140, 0.15),
+                0 20px 60px rgba(0, 0, 0, 0.6),
+                0 8px 24px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 var(--crystal-shine-top),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+                inset 6px 0 50px rgba(237, 0, 140, 0.05),
+                inset -6px 0 50px rgba(0, 190, 241, 0.05);
+
+            /* crystal: frosted glass blur */
+            backdrop-filter: blur(12px) saturate(1.5);
+            -webkit-backdrop-filter: blur(12px) saturate(1.5);
+        }
+
+        /* crystal: facet-shine overlay */
+        #h2h-graphic::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(237, 0, 140, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(0, 190, 241, 0.06) 0%, transparent 50%),
+                linear-gradient(125deg,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0.02) 35%,
+                    rgba(255, 255, 255, 0.06) 48%,
+                    rgba(255, 255, 255, 0.02) 55%,
+                    transparent 80%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* crystal: animated shimmer sweep */
+        #h2h-graphic::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -120%;
+            width: 60%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            background: linear-gradient(105deg,
+                transparent 0%,
+                rgba(255, 255, 255, 0.00) 30%,
+                rgba(255, 255, 255, 0.05) 48%,
+                rgba(255, 255, 255, 0.11) 50%,
+                rgba(255, 255, 255, 0.05) 52%,
+                rgba(255, 255, 255, 0.00) 70%,
+                transparent 100%);
+            animation: crystalSweep 5s ease-in-out infinite;
+        }
+
+        @keyframes crystalSweep {
+            0%   { left: -120%; opacity: 0; }
+            8%   { opacity: 1; }
+            50%  { left: 140%; opacity: 1; }
+            58%  { opacity: 0; }
+            100% { left: 140%; opacity: 0; }
+        }
+
+        /* Pink Header from batting_card.html (35px height) */
+        .h2h-header {
+            background: linear-gradient(90deg, var(--accent-pink) 0%, #ff30a1 100%);
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 30px;
+            position: relative; 
+            border-bottom: 2px solid var(--accent-cyan);
+            z-index: 10;
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.32),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.22);
+        }
+
+        .h2h-header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(255, 255, 255, 0.65) 20%,
+                rgba(255, 255, 255, 0.88) 50%,
+                rgba(255, 255, 255, 0.65) 80%,
+                transparent 100%);
+            z-index: 5;
+        }
+
+        .h2h-header::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 45%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, transparent 100%);
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        .header-title {
+            color: #fff;
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Body Layout: Explicit Proportions from final.html */
+        .h2h-body {
+            flex: 1;
+            display: flex;
+            align-items: stretch;
+            position: relative; z-index: 5;
+            background: var(--master-grad); position: relative; }
+
+        /* Player Box (Matches matchup-player-img-box in final.html) */
+        .player-box {
+            width: 280px;
+            /* Exact size from original */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative; }
+
+        .player-portrait {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top center;
+            z-index: 2;
+            min-height: 0;
+            /* Prevents overflow in flexbox */
+        }
+
+        .player-nameplate {
+            width: 100%;
+            background: rgb(0 0 0 / 34%);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 15px;
+            text-align: center;
+        }
+
+        .p-role {
+            color: var(--accent-cyan);
+            font-size: 15px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
+            opacity: 0.8;
+        }
+
+        .p-name {
+            font-family: var(--font-display);
+            font-size: 33px;
+            font-weight: 700;
+            text-transform: uppercase;
+            line-height: 1;
+            margin-bottom: 5px;
+            color: yellow;
+        }
+
+        .p-flag {
+            width: 32px;
+            height: 20px;
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Center Section: Stats Analysis */
+        .stats-center {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 11px 40px;
+            background: rgb(0 0 0 / 47%);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .vs-tag {
+            font-family: var(--font-display);
+            font-size: 40px;
+            font-weight: 900;
+            text-align: center;
+            color: var(--accent-pink);
+            margin-bottom: 15px;
+            opacity: 0.7;
+        }
+
+        .stat-row {
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08); /* tight divider */
+            position: relative;
+        }
+
+        .stat-row::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
+        }
+
+        .stat-val {
+            font-family: var(--font-display);
+            font-size: 26px;
+            font-weight: 700;
+            width: 80px;
+            color: yellow;
+        }
+
+        .val-l {
+            text-align: left;
+        }
+
+        .val-r {
+            text-align: right;
+        }
+
+        .higher {
+            color: var(--accent-yellow);
+        }
+
+        .stat-lbl {
+            flex: 1;
+            text-align: center;
+            text-transform: uppercase;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: rgb(255 255 255);
+        }
+
+        /* ── OPTIONAL SAFE-AREA OVERLAY (TV CHECK) ──
+           Use: head_to_head.html#safe-area
+        */
+        #safe-area {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            width: 1920px;
+            height: 1080px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            border-radius: 18px;
+            border: 1px dashed rgba(255, 255, 255, 0.25);
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+            display: none;
+            z-index: 99999;
+        }
+
+        #safe-area:target {
+            display: block;
+        }
+
+        #safe-area::before {
+            content: '';
+            position: absolute;
+            left: 96px;
+            right: 96px;
+            top: 54px;
+            bottom: 54px;
+            border: 1px dashed rgba(0, 190, 241, 0.85);
+        }
+    
+        .sc-watermark {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            height: auto;
+            opacity: 0.1;
+            z-index: 0;
+            pointer-events: none;
+            filter: grayscale(1) brightness(1.5);
+        }
+    </style>
+    <style>
+        body * {
+            box-shadow: none !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="safe-area" aria-hidden="true"></div>
+    <div class="broadcast-canvas">
+        <div id="h2h-graphic">
+            <!-- Pink Header -->
+            <div class="h2h-header">
+                <div class="header-title" id="tournament-text">Head to Head Matchup</div>
+            </div>
+
+            <div class="h2h-body">
+                <img src="https://upload.wikimedia.org/wikipedia/en/thumb/f/fa/2026_ICC_Men%27s_T20_World_Cup_logo.svg/1280px-2026_ICC_Men%27s_T20_World_Cup_logo.svg.png" class="sc-watermark" alt="Watermark">
+                <!-- Left Player (280px) -->
+                <div class="player-box" id="p-box-l">
+                    <img src="https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" class="player-portrait"
+                        alt="Rohit">
+                    <div class="player-nameplate">
+                        <div class="p-role" id="p1-role">Batsman</div>
+                        <div class="p-name" id="p1-name">Rohit Sharma</div>
+                    </div>
+                </div>
+
+                <!-- Center Stats -->
+                <div class="stats-center" id="stat-list">
+                    <div class="vs-tag">VS</div>
+
+                    <div class="stat-row">
+                        <span class="stat-val val-l">159</span>
+                        <span class="stat-lbl">Matches</span>
+                        <span class="stat-val val-r higher">164</span>
+                    </div>
+
+                    <div class="stat-row">
+                        <span class="stat-val val-l higher">4231</span>
+                        <span class="stat-lbl">Runs Scored</span>
+                        <span class="stat-val val-r">3892</span>
+                    </div>
+
+                    <div class="stat-row">
+                        <span class="stat-val val-l">140.8</span>
+                        <span class="stat-lbl">Strike Rate</span>
+                        <span class="stat-val val-r higher">151.2</span>
+                    </div>
+
+                    <div class="stat-row">
+                        <span class="stat-val val-l">4</span>
+                        <span class="stat-lbl">Centuries</span>
+                        <span class="stat-val val-r higher">6</span>
+                    </div>
+
+                </div>
+
+                <!-- Right Player (280px) -->
+                <div class="player-box" id="p-box-r">
+                    <img src="https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" class="player-portrait"
+                        alt="Babar">
+                    <div class="player-nameplate">
+                        <div class="p-role" id="p2-role">Batsman</div>
+                        <div class="p-name" id="p2-name">Babar Azam</div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data preserved from previous version
+        const graphicData = {
+            title: "Player Comparison",
+            player1: {
+                name: "Rohit Sharma",
+                designation: "Batsman",
+                flag: "assets/flags/ind.png",
+                img: "assets/players/rohit_sharma.png"
+            },
+            player2: {
+                name: "Babar Azam",
+                designation: "Batsman",
+                flag: "assets/flags/pak.png",
+                img: "assets/players/babar_azam.png"
+            },
+            stats: [
+                { label: "Matches", p1: 159, p2: 123 },
+                { label: "Total Runs", p1: 4231, p2: 4145 },
+                { label: "Strike Rate", p1: 140.8, p2: 129.4 },
+                { label: "Batting Avg", p1: 32.05, p2: 41.03 }
+            ]
+        };
+
+        function show() {
+            const tl = gsap.timeline({ defaults: { ease: "power3.out", duration: 1 } });
+
+            gsap.set("#h2h-graphic", { opacity: 0, y: 0 });
+            gsap.set("#p-box-l", { x: -30, opacity: 0 });
+            gsap.set("#p-box-r", { x: 30, opacity: 0 });
+            gsap.set(".stat-row", { opacity: 0, x: -10 });
+
+            tl.to("#h2h-graphic", { opacity: 1, y: 0 })
+                .to(["#p-box-l", "#p-box-r"], { x: 0, opacity: 1, stagger: 0.2 }, "-=0.5")
+                .to(".stat-row", { opacity: 1, x: 0, stagger: 0.1 }, "-=0.4");
+        }
+        function hide() {
+            const tl = gsap.timeline();
+            tl.to('.stat-row', { opacity: 0, x: -10, duration: 0.3, stagger: 0.03, ease: 'power2.in' })
+                .to('#h2h-graphic', { opacity: 0, scale: 0.95, y: 0, duration: 0.5, ease: 'power2.in' }, '-=0.2');
+        }
+
+
+        document.addEventListener('DOMContentLoaded', show);
+    
+    
+
+        // === LISTEN FOR CANVAS HIDE COMMAND ===
+        window.addEventListener('message', (e) => {
+            if (e.data === 'HIDE') hide();
+        });
+    </script>
+</body>
+
+</html>

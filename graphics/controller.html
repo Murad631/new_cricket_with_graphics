@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graphics Controller - CasparCG</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0a0a1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        .top-bar {
+            background: linear-gradient(135deg, #1a1a2e 0%, #0a0a1a 100%);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .top-bar h1 {
+            font-size: 16px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #00bef1, #ed008c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .top-bar-actions {
+            display: flex; gap: 10px; align-items: center;
+        }
+
+        .search {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            width: 220px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search:focus { border-color: #00bef1; }
+
+        .btn-hideall {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 12px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .btn-hideall:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(220,38,38,0.4); }
+        .btn-hideall:active { transform: scale(0.97); }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+            gap: 8px;
+            padding: 20px 24px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 8px;
+            padding: 14px 12px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        .card:hover {
+            background: rgba(255,255,255,0.07);
+            border-color: rgba(0,190,241,0.3);
+        }
+
+        /* ON state */
+        .card.on {
+            background: rgba(46,204,113,0.15);
+            border-color: #2ecc71;
+            box-shadow: 0 0 12px rgba(46,204,113,0.2);
+        }
+        .card.on .card-name { color: #2ecc71; }
+
+        .card-name {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: rgba(255,255,255,0.7);
+            line-height: 1.3;
+        }
+        .card-file {
+            font-size: 10px;
+            color: rgba(255,255,255,0.25);
+            margin-top: 4px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .live-dot {
+            display: none;
+            width: 6px; height: 6px;
+            background: #2ecc71;
+            border-radius: 50%;
+            margin: 6px auto 0;
+            animation: blink 1s infinite;
+        }
+        .card.on .live-dot { display: block; }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <h1>CG Control</h1>
+        <div class="top-bar-actions">
+            <input class="search" id="search" placeholder="Search graphics..." oninput="doSearch()">
+            <button class="btn-hideall" onclick="hideAll()">⬛ Hide All</button>
+        </div>
+    </div>
+    <div class="grid" id="grid"></div>
+
+<script>
+    // ========================================
+    // CONTROLLER: Sends SHOW/HIDE to canvas
+    // Tracks its own state (on/off per button)
+    // ========================================
+
+    const FILES = [
+        "all_matches.html", "batting_card.html", "both_squads.html",
+        "bowling_panel.html", "bowling_speed.html", "crr_vs_rrr.html",
+        "dls_par.html", "extras.html", "fall_of_wicket.html",
+        "fantasy_impact.html", "free_hit.html", "full_scoreboard.html",
+        "head_to_head.html", "leaderboard.html", "match_details.html",
+        "match_summary.html", "new_all_matches.html", "over_summary.html",
+        "partnership.html", "phase_summary.html", "pitch_report.html",
+        "player_intro.html", "player_l3_stats.html", "playing_xi.html",
+        "points_table.html", "power_play.html", "run_flow.html",
+        "sponsor_bug.html", "super_over.html", "tournament_overview.html",
+        "wagon_wheel.html", "wicket_dismissal.html", "win_prediction.html"
+    ];
+
+    const ch = new BroadcastChannel('cg_ctrl');
+    const state = {};  // file -> true/false
+
+    const grid = document.getElementById('grid');
+
+    FILES.sort().forEach(file => {
+        state[file] = false;
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.id = 'c_' + file.replace(/\W/g, '_');
+        card.innerHTML = `
+            <div class="card-name">${file.replace('.html','').replace(/_/g,' ')}</div>
+            <div class="card-file">${file}</div>
+            <div class="live-dot"></div>
+        `;
+        card.onclick = () => toggle(file);
+        grid.appendChild(card);
+    });
+
+    function toggle(file) {
+        const card = document.getElementById('c_' + file.replace(/\W/g, '_'));
+        if (state[file]) {
+            // Currently ON -> send HIDE
+            ch.postMessage({ cmd: 'HIDE', file });
+            state[file] = false;
+            card.classList.remove('on');
+        } else {
+            // Currently OFF -> send SHOW
+            ch.postMessage({ cmd: 'SHOW', file });
+            state[file] = true;
+            card.classList.add('on');
+        }
+    }
+
+    function hideAll() {
+        ch.postMessage({ cmd: 'HIDEALL' });
+        Object.keys(state).forEach(file => {
+            state[file] = false;
+            const card = document.getElementById('c_' + file.replace(/\W/g, '_'));
+            if (card) card.classList.remove('on');
+        });
+    }
+
+    function doSearch() {
+        const q = document.getElementById('search').value.toLowerCase();
+        document.querySelectorAll('.card').forEach(c => {
+            c.style.display = c.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    }
+</script>
+</body>
+</html>

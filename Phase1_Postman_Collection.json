@@ -1,0 +1,73 @@
+{
+  "info": {
+    "name": "Cricket Graphics - Phase 1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "All Matches",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3000/api/graphics/phase1/all-matches",
+          "protocol": "http",
+          "host": [ "localhost" ],
+          "port": "3000",
+          "path": [ "api", "graphics", "phase1", "all-matches" ]
+        }
+      }
+    },
+    {
+      "name": "Batting Card",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3000/api/graphics/phase1/batting-card/4",
+          "protocol": "http",
+          "host": [ "localhost" ],
+          "port": "3000",
+          "path": [ "api", "graphics", "phase1", "batting-card", "4" ]
+        }
+      }
+    },
+    {
+      "name": "Bowling Panel",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3000/api/graphics/phase1/bowling-panel/4",
+          "protocol": "http",
+          "host": [ "localhost" ],
+          "port": "3000",
+          "path": [ "api", "graphics", "phase1", "bowling-panel", "4" ]
+        }
+      }
+    },
+    {
+      "name": "Full Scoreboard",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3000/api/graphics/phase1/full-scoreboard/4",
+          "protocol": "http",
+          "host": [ "localhost" ],
+          "port": "3000",
+          "path": [ "api", "graphics", "phase1", "full-scoreboard", "4" ]
+        }
+      }
+    },
+    {
+      "name": "Run Flow",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3000/api/graphics/phase1/run-flow/4",
+          "protocol": "http",
+          "host": [ "localhost" ],
+          "port": "3000",
+          "path": [ "api", "graphics", "phase1", "run-flow", "4" ]
+        }
+      }
+    }
+  ]
+}

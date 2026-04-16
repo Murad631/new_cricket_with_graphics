@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>sponsor_bug</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700;900&family=Roboto+Condensed:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <style>
+        :root {
+            /* SAFE AREAS - Responsive */
+            --safe-right: clamp(20px, 5vw, 96px);
+            --safe-top: clamp(15px, 5vh, 54px);
+
+            /* THEME */
+            --header-grad: #4d03a7;
+            --header-pink: #4d03a7;
+            /* Gold accent for Tapal theme */
+            --text-white: #ffffff;
+            --font-display: 'Oswald', sans-serif;
+            --font-body: 'Roboto Condensed', sans-serif;
+            --border-white: rgba(255, 255, 255, 0.4);
+            --shadow-premium: 0 12px 36px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.25);
+            --geo-texture: linear-gradient(135deg, rgba(0, 190, 241, 0.4) 0%, rgba(0, 229, 255, 0.15) 30%, transparent 50%);
+            --cyan-bright: #00bef1;
+            --logo-url: url("https://i.ytimg.com/vi/I2DJpc9yAsk/maxresdefault.jpg");
+        }
+
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            background: transparent;
+            display: flex;
+            justify-content: flex-end;
+            /* RTB */
+            align-items: flex-start;
+            /* RTB */
+            /* Fixed padding for maximum safety at all zoom levels */
+            padding-top: 80px;
+            padding-right: 120px;
+        }
+
+        #sponsor-bug {
+            position: relative; display: none;
+            width: 280px;
+            /* Fixed width for Square */
+            flex-direction: column;
+            overflow: hidden;
+            background: transparent;
+            border: none;
+        }
+
+        .sponsor-bug-header {
+            background: var(--header-pink);
+            border: 1px solid var(--border-white);
+            border-top: 4px solid var(--cyan-bright);
+            box-shadow: var(--shadow-premium);
+            padding: 12px 16px;
+            font-family: var(--font-body);
+            font-size: 15px;
+            font-weight: 1000;
+            color: var(--text-white);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            text-align: center;
+            width: 100%;
+        }
+
+        .sponsor-bug-body {
+            width: 100%;
+            height: 240px;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            /* Remove internal padding to allow full box look */
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 5%), linear-gradient(180deg, rgba(251, 63, 63, 0.3) 0%, rgba(77, 3, 167, 0.1) 100%); position: relative; border: 1px solid var(--border-white);
+            border-top: none;
+            box-shadow: var(--shadow-premium);
+            overflow: hidden;
+        }
+
+        .sponsor-logo-area {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative; /* For absolute blurred background */
+            overflow: hidden;
+            padding: 0;
+        }
+
+        /* The Blurred Backdrop */
+        .sponsor-logo-area::before {
+            content: '';
+            position: absolute;
+            inset: -10px;
+            /* Slight bleed to avoid edge artifacts */
+            background-image: var(--logo-url);
+            background-size: cover;
+            background-position: center;
+            filter: blur(20px) brightness(0.5);
+            /* Deep blur and dimming */
+            z-index: 1;
+        }
+
+        .sponsor-logo-area img {
+            position: relative; z-index: 2;
+            /* Sits above the blur */
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            /* Shows FULL image without any cutting */
+        }
+
+        .sponsor-footer {
+            background: rgba(0, 0, 0, 0.4);
+            /* Darker footer for contrast */
+            padding: 10px;
+            text-align: center;
+            border-top: 2px solid var(--header-pink);
+            /* Gold accent separator */
+        }
+
+        .sponsor-bug-tagline {
+            color: var(--text-white);
+            font-family: var(--font-body);
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0;
+            opacity: 0.95;
+        }
+
+        #sponsor-bug::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: var(--geo-texture);
+            opacity: 0.2;
+            pointer-events: none;
+        }
+    
+        .sc-watermark {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            height: auto;
+            opacity: 0.1;
+            z-index: 0;
+            pointer-events: none;
+            filter: grayscale(1) brightness(1.5);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="safe-area-overlay"></div>
+    <div id="sponsor-bug">
+        <div class="sponsor-bug-header">Broadcast Partner</div>
+        <div class="sponsor-bug-body">
+            <div class="sponsor-logo-area">
+                <img src="https://i.ytimg.com/vi/I2DJpc9yAsk/maxresdefault.jpg" alt="Sponsor Logo">
+            </div>
+            <div class="sponsor-footer">
+                <div class="sponsor-bug-tagline">Official Partner ICC 2026</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('sponsor-bug').style.display = 'flex';
+        gsap.set('#sponsor-bug', { opacity: 0 });
+
+        setTimeout(() => { showGraphic(); }, 50);
+
+        function showGraphic() {
+            const tl = gsap.timeline();
+
+            // 1. Initial State: Body hidden by height
+            gsap.set('#sponsor-bug', { display: 'flex', opacity: 1, x: 300 });
+            gsap.set('.sponsor-bug-body', { height: 0, opacity: 0 });
+
+            // 2. Step 1: Slide in only the header from right
+            tl.to('#sponsor-bug', {
+                x: 0,
+                duration: 0.7,
+                ease: 'power3.out'
+            })
+                // 3. Step 2: "Properly" open the body downwards (240px for Square)
+                .to('.sponsor-bug-body', {
+                    height: 240,
+                    opacity: 1,
+                    duration: 0.8,
+                    ease: 'power2.inOut'
+                });
+        }
+
+        function hideGraphic() {
+            const tl = gsap.timeline();
+            tl.to('.sponsor-bug-body', { height: 0, opacity: 0, duration: 0.4, ease: 'power2.in' })
+                .to('#sponsor-bug', { x: 300, opacity: 0, duration: 0.4, ease: 'power3.in' })
+                .set('#sponsor-bug', { display: 'none' });
+        }
+
+        window.updateGraphicName = function (data) {
+            try {
+                const parsed = typeof data === "string" ? JSON.parse(data) : data;
+                if (parsed.status === "hide" || parsed.hide) {
+                    hideGraphic();
+                } else {
+                    showGraphic();
+                }
+            } catch (e) {
+                // Ignore
+            }
+        };
+    
+    
+
+        // === EXIT ANIMATION (Reverse of Show) ===
+
+        // === LISTEN FOR CANVAS COMMANDS ===
+        window.addEventListener('message', (e) => {
+            const parsed = e.data;
+            if (parsed.type === 'SHOW' || parsed.type === 'UPDATE') {
+                const data = parsed.data;
+                if (data) {
+                    // 1. Update text content
+                    if (data.header) document.querySelector('.sponsor-bug-header').innerText = data.header;
+                    if (data.tagline) document.querySelector('.sponsor-bug-tagline').innerText = data.tagline;
+
+                    // 2. Update logo and backdrop
+                    if (data.image) {
+                        const imgPath = data.image.startsWith('http') ? data.image : `http://localhost:3000${data.image}`;
+                        document.querySelector('.sponsor-logo-area img').src = imgPath;
+                        document.documentElement.style.setProperty('--logo-url', `url("${imgPath}")`);
+                    }
+                }
+                showGraphic();
+            } else if (parsed.type === 'HIDE') {
+                hideGraphic();
+            }
+        });
+    </script>
+</body>
+
+</html>

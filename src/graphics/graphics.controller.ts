@@ -1,0 +1,173 @@
+import { Controller, Get, Post, Body, Param, Query, Patch, Delete, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+
+import { GraphicsService } from './graphics.service';
+import { FowSeeder } from '../seeder/seed-fow';
+import { Sponsor } from '../Entity/sponsor.entity';
+import { PitchReport } from '../Entity/pitch_report.entity';
+
+@Controller('api/graphics')
+export class GraphicsController {
+  constructor(
+    private readonly graphicsService: GraphicsService,
+    private readonly fowSeeder: FowSeeder,
+    private eventEmitter: EventEmitter2
+  ) {}
+
+  @Get('phase1/all-matches')
+  async getAllMatches() {
+    const data = await this.graphicsService.getAllMatches();
+    const payload = { type: 'update', graphic: 'all_matches', data };
+    this.eventEmitter.emit('graphic_event', payload);
+    return payload;
+  }
+
+  @Get('phase1/batting-card/:matchId')
+  async getBattingCard(@Param('matchId') matchId: string) {
+    const payload = await this.graphicsService.getBattingCard(parseInt(matchId));
+    this.eventEmitter.emit('graphic_event', payload);
+    return payload;
+  }
+
+  @Get('phase1/bowling-panel/:matchId')
+  async getBowlingPanel(@Param('matchId') matchId: string) {
+    const payload = await this.graphicsService.getBowlingPanel(parseInt(matchId));
+    this.eventEmitter.emit('graphic_event', payload);
+    return payload;
+  }
+
+  @Get('phase1/full-scoreboard/:matchId')
+  async getFullScoreboard(@Param('matchId') matchId: string) {
+    const payload = await this.graphicsService.getFullScoreboard(parseInt(matchId));
+    this.eventEmitter.emit('graphic_event', payload);
+    return payload;
+  }
+
+  @Get('phase2/match-summary/:matchId')
+  async getMatchSummary(@Param('matchId') matchId: string) {
+    const payload = await this.graphicsService.getMatchSummary(parseInt(matchId));
+    this.eventEmitter.emit('graphic_event', payload);
+    return payload;
+  }
+
+  // ==========================================
+  // --- PHASE 3 & 4: SPONSOR CONTROL & UPLOAD ---
+  // ==========================================
+
+  @Get('sponsors')
+  async listSponsors() {
+    return await this.graphicsService.listSponsors();
+  }
+
+  @Post('sponsors')
+  @UseInterceptors(FileInterceptor('image', {
+    storage: diskStorage({
+      destination: './uploads/sponsors',
+      filename: (req, file, cb) => {
+        const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
+        return cb(null, `${randomName}${extname(file.originalname)}`);
+      }
+    })
+  }))
+  async createSponsor(@Body() data: Partial<Sponsor>, @UploadedFile() file: Express.Multer.File) {
+    if (file) {
+      data.image = `/uploads/sponsors/${file.filename}`;
+    }
+    return await this.graphicsService.createSponsor(data);
+  }
+
+  @Patch('sponsors/:id')
+  @UseInterceptors(FileInterceptor('image', {
+    storage: diskStorage({
+      destination: './uploads/sponsors',
+      filename: (req, file, cb) => {
+        const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
+        return cb(null, `${randomName}${extname(file.originalname)}`);
+      }
+    })
+  }))
+  async updateSponsor(@Param('id') id: string, @Body() data: Partial<Sponsor>, @UploadedFile() file: Express.Multer.File) {
+    if (file) {
+      data.image = `/uploads/sponsors/${file.filename}`;
+    }
+    return await this.graphicsService.updateSponsor(parseInt(id), data);
+  }
+
+  @Delete('sponsors/:id')
+  async deleteSponsor(@Param('id') id: string) {
+    return await this.graphicsService.deleteSponsor(parseInt(id));
+  }
+
+  @Post('sponsors/trigger/:id')
+  async triggerSponsor(@Param('id') id: string) {
+    const payload = await this.graphicsService.triggerSponsor(parseInt(id));
+    if (payload.type === 'update') {
+        this.eventEmitter.emit('graphic_event', payload);
+    }
+    return payload;
+  }
+
+  // ==========================================
+  // --- PHASE 3: PITCH REPORT ---
+  // ==========================================
+
+  @Post('pitch-report')
+  async upsertPitchReport(@Body() data: Partial<PitchReport>) {
+    return await this.graphicsService.upsertPitchReport(data);
+  }
+
+  @Get('pitch-report/:matchId/:inningsId')
+  async getPitchReport(@Param('matchId') matchId: string, @Param('inningsId') inningsId: string) {
+    return await this.graphicsService.getPitchReport(parseInt(matchId), parseInt(inningsId));
+  }
+
+  @Post('pitch-report/trigger/:matchId/:inningsId')
+  async triggerPitchReport(@Param('matchId') matchId: string, @Param('inningsId') inningsId: string) {
+    const payload = await this.graphicsService.triggerPitchReport(parseInt(matchId), parseInt(inningsId));
+    this.eventEmitter.emit('graphic_event', payload);
+    return payload;
+  }
+
+  // ==========================================
+  // --- PHASE 3: CONTROL LISTINGS ---
+  // ==========================================
+
+  @Get('control/matches')
+  async listMatches() {
+    return await this.graphicsService.listMatches();
+  }
+
+  @Get('control/overs/:matchId/:inningsId')
+  async listOvers(@Param('matchId') matchId: string, @Param('inningsId') inningsId: string) {
+    return await this.graphicsService.listOvers(parseInt(matchId), parseInt(inningsId));
+  }
+
+  @Get('phase-summary/:matchId/:inningsId')
+  async getPhaseSummary(
+    @Param('matchId') matchId: string, 
+    @Param('inningsId') inningsId: string,
+    @Query('start') start: string,
+    @Query('end') end: string
+  ) {
+    const payload = await this.graphicsService.getPhaseSummary(
+        parseInt(matchId), parseInt(inningsId), parseInt(start), parseInt(end)
+    );
+    this.eventEmitter.emit('graphic_event', payload);
+    return payload;
+  }
+
+  @Post('trigger-tag/:type')
+  async triggerTag(@Param('type') type: string) {
+    const payload = await this.graphicsService.triggerPhaseTag(type);
+    this.eventEmitter.emit('graphic_event', payload);
+    return payload;
+  }
+
+  @Get('phase2/test-seed-fow')
+  async seedFow() {
+    return await this.fowSeeder.seed();
+  }
+}

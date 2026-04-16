@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>Master Canvas - ICC Broadcast</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; background: transparent !important; overflow: hidden; }
+        .layer { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+        .layer iframe { width: 100%; height: 100%; border: none; background: transparent !important; pointer-events: auto; }
+    </style>
+</head>
+
+<body>
+    <div id="master-container"></div>
+
+    <script>
+        const layers = {};
+
+        function showGraphic(file, data) {
+            console.log("Canvas Requesting Show:", file);
+            if (layers[file]) {
+                const iframe = layers[file].querySelector('iframe');
+                if (iframe && iframe.contentWindow) {
+                    iframe.contentWindow.postMessage({ type: 'UPDATE', data: data }, '*');
+                }
+                return;
+            }
+
+            const div = document.createElement('div');
+            div.className = 'layer';
+            
+            const iframe = document.createElement('iframe');
+            iframe.src = file;
+            iframe.allowTransparency = 'true';
+            
+            iframe.onload = () => {
+                // Use postMessage only to avoid cross-origin security errors
+                setTimeout(() => {
+                    if (iframe.contentWindow) {
+                        iframe.contentWindow.postMessage({ type: 'SHOW', data: data }, '*');
+                    }
+                }, 150);
+            };
+
+            div.appendChild(iframe);
+            document.getElementById('master-container').appendChild(div);
+            layers[file] = div;
+        }
+
+        function hideGraphic(file) {
+            const div = layers[file];
+            if (!div) return;
+            
+            const iframe = div.querySelector('iframe');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage({ type: 'HIDE' }, '*');
+            }
+
+            setTimeout(() => {
+                if (div.parentNode) div.parentNode.removeChild(div);
+                delete layers[file];
+            }, 1200);
+        }
+
+        window.onload = () => {
+             // Listener for all child graphics
+            if (typeof io !== 'undefined') {
+                const socket = io('http://localhost:3000');
+                socket.on('graphic_event', (p) => {
+                    const file = p.graphic + '.html';
+                    if (p.type === 'show' || p.type === 'update') {
+                        showGraphic(file, p.data);
+                    } else if (p.type === 'hide') {
+                        hideGraphic(file);
+                    }
+                });
+            }
+        };
+    </script>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+</body>
+</html>

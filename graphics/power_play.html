@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, height=1080">
+  <title>Power Play - RTB</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700;900&family=Roboto+Condensed:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --primary-navy: #4d03a7;
+      --accent-cyan: #00bef1;
+      --text-white: #ffffff;
+      --font-display: 'Oswald', sans-serif;
+      --border-white: rgba(255, 255, 255, 0.4);
+      --header-grad: #4d03a7;
+      --shadow-premium: 0 12px 36px rgba(0, 0, 0, 0.4);
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      /* background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 5%), linear-gradient(180deg, rgba(251, 63, 63, 0.3) 0%, rgba(77, 3, 167, 0.1) 100%); position: relative; overflow: hidden; */
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-start;
+      /* Fixed padding for maximum safety at all zoom levels */
+      padding-top: 80px;
+      padding-right: 120px;
+    }
+
+    #powerplay-bug {
+      position: relative;
+      visibility: hidden;
+      opacity: 0;
+      background: var(--header-grad);
+      border: 1px solid var(--border-white);
+      border-left: 5px solid var(--accent-cyan);
+      padding: 2px 9px;
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-white);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      box-shadow: var(--shadow-premium);
+      border-radius: 4px;
+    }
+
+    /* SAFE AREA OVERLAY (Same as batting_card) */
+    #safe-area-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      border: 1px dashed rgba(255, 255, 255, 0.1);
+      display: none;
+      z-index: 9999;
+    }
+
+    #safe-area-overlay::before {
+      content: '';
+      position: absolute;
+      inset: 80px 120px;
+      border: 1px dashed rgba(0, 190, 241, 0.4);
+    }
+
+    .sc-watermark {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      height: auto;
+      opacity: 0.1;
+      z-index: 0;
+      pointer-events: none;
+      filter: grayscale(1) brightness(1.5);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="safe-area-overlay"></div>
+  <div id="powerplay-bug">⚡ POWERPLAY 1</div>
+
+  <script>
+    const bug = document.getElementById('powerplay-bug');
+
+    function showGraphic() {
+      gsap.set(bug, { visibility: 'visible' });
+      gsap.fromTo(bug,
+        { x: 50, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.5, ease: 'back.out(1.5)', display: 'flex' }
+      );
+    }
+
+    function hideGraphic() {
+      gsap.to(bug, { scale: 0.8, opacity: 0, x: 50, duration: 0.4, ease: 'power2.in' });
+    }
+
+    window.updateGraphicName = function (data) {
+      try {
+        const parsed = typeof data === "string" ? JSON.parse(data) : data;
+        if (parsed.status === "hide" || parsed.hide) {
+          hideGraphic();
+        } else if (parsed.text) {
+          bug.innerText = "⚡ " + parsed.text.toUpperCase();
+          showGraphic();
+        } else {
+          showGraphic();
+        }
+      } catch (e) {
+        showGraphic();
+      }
+    };
+
+    // Auto-show for manual browser testing (Matches user's workflow)
+    setTimeout(() => {
+      if (bug.style.visibility !== 'visible') showGraphic();
+    }, 500);
+
+    // Safe Area Toggle
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('safeArea') === '1' || window.location.hash === '#safe-area') {
+      document.getElementById('safe-area-overlay').style.display = 'block';
+    }
+  
+    
+
+        // === EXIT ANIMATION (Reverse of Show) ===
+
+        function hide() {
+            hideGraphic();
+        }
+
+        // === LISTEN FOR CANVAS HIDE COMMAND ===
+        window.addEventListener('message', (e) => {
+            if (e.data === 'HIDE') hide();
+        });
+    </script>
+</body>
+
+</html>

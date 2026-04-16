@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>free_hit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700;900&family=Roboto+Condensed:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <style>
+        :root {
+            /* SAFE AREAS - Responsive */
+            --safe-left: clamp(20px, 5vw, 96px);
+            --safe-top: clamp(15px, 5vh, 54px);
+
+            /* THEME */
+            --header-grad: #4d03a7;
+            --text-white: #ffffff;
+            --font-display: 'Oswald', sans-serif;
+            --red: #e53935;
+            --border-white: rgba(255, 255, 255, 0.4);
+            --shadow-premium: 0 12px 36px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.25);
+            --geo-texture: linear-gradient(135deg, rgba(0, 190, 241, 0.4) 0%, rgba(0, 229, 255, 0.15) 30%, transparent 50%);
+        }
+
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            /* background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 5%), linear-gradient(180deg, rgba(251, 63, 63, 0.3) 0%, rgba(77, 3, 167, 0.1) 100%); */
+            position: relative;
+            display: flex;
+            justify-content: flex-start;
+            /* LTB */
+            align-items: flex-start;
+            /* LTB */
+            padding-top: var(--safe-top);
+            padding-left: var(--safe-left);
+        }
+
+        #free-hit {
+            position: relative;
+            display: none;
+            background: var(--header-grad);
+            color: var(--text-white);
+            padding: 6px 18px;
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border: 1px solid var(--border-white);
+            border-left: 4px solid var(--red);
+            box-shadow: var(--shadow-premium);
+            overflow: hidden;
+        }
+
+        #free-hit::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: var(--geo-texture);
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .sc-watermark {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            height: auto;
+            opacity: 0.1;
+            z-index: 0;
+            pointer-events: none;
+            filter: grayscale(1) brightness(1.5);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="free-hit">⚡ FREE HIT</div>
+
+    <script>
+        document.getElementById('free-hit').style.display = 'flex';
+        gsap.set('#free-hit', { opacity: 0 });
+
+        setTimeout(() => { showGraphic(); }, 50);
+
+        function showGraphic() {
+            gsap.fromTo('#free-hit', { x: -50, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: 'back.out(1.5)', display: 'flex' });
+        }
+
+        function hideGraphic() {
+            gsap.to('#free-hit', { opacity: 0, x: -50, duration: 0.4, ease: 'power2.in', display: 'none' });
+        }
+
+        window.updateGraphicName = function (data) {
+            try {
+                const parsed = typeof data === "string" ? JSON.parse(data) : data;
+                if (parsed.status === "hide" || parsed.hide) {
+                    hideGraphic();
+                } else {
+                    showGraphic();
+                }
+            } catch (e) {
+                // Ignore
+            }
+        };
+    
+    
+
+        // === EXIT ANIMATION (Reverse of Show) ===
+
+        function hide() {
+            hideGraphic();
+        }
+
+        // === LISTEN FOR CANVAS HIDE COMMAND ===
+        window.addEventListener('message', (e) => {
+            if (e.data === 'HIDE') hide();
+        });
+    </script>
+</body>
+
+</html>

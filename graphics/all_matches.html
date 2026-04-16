@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>All Matches - Majestic Slow</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700;900&family=Roboto+Condensed:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-navy: #0e0423;
+            --accent-cyan: #00bef1;
+            --accent-pink: #ed008c;
+            --accent-yellow: #fded00;
+            --font-display: 'Oswald', sans-serif;
+            --font-body: 'Roboto Condensed', sans-serif;
+            --font-mono: 'Roboto Mono', monospace;
+            --master-grad: linear-gradient(180deg, rgba(237, 0, 140, 0.45) 0%, rgba(77, 3, 167, 0.2) 100%);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+        body {
+            width: 1920px; height: 1080px; overflow: hidden;
+            background: transparent; font-family: var(--font-body);
+        }
+
+        .broadcast-canvas {
+            position: fixed; inset: 0; display: flex;
+            justify-content: center; align-items: center; z-index: 100;
+        }
+
+        #fixtures-master {
+            width: fit-content; background: var(--primary-navy);
+            border: 1px solid rgba(255, 255, 255, 0.2); border-left: 4px solid var(--accent-pink);
+            display: flex; flex-direction: column; opacity: 0; visibility: hidden;
+            position: relative; overflow: hidden; backdrop-filter: blur(12px) saturate(1.5);
+            box-shadow: 0 40px 110px rgba(0, 0, 0, 0.75);
+        }
+
+        .fixtures-header {
+            background: linear-gradient(90deg, var(--accent-pink) 0%, #ff30a1 100%);
+            height: 45px; display: flex; align-items: center; justify-content: space-between;
+            padding: 0 20px; border-bottom: 2px solid var(--accent-cyan);
+        }
+
+        .fixtures-header-title {
+            font-family: var(--font-display); font-size: 24px; color: #fff;
+            text-transform: uppercase; letter-spacing: 4px; font-weight: 700;
+        }
+
+        .fixtures-body-wrapper { background: var(--master-grad); position: relative; }
+
+        .table-head {
+            display: grid; grid-template-columns: 60px 140px 500px 180px 250px;
+            background: rgba(0, 0, 0, 0.3); border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding: 0 15px;
+        }
+
+        .th-label {
+            font-size: 13px; font-weight: 700; color: var(--accent-cyan);
+            text-transform: uppercase; letter-spacing: 1.5px; padding: 10px 5px; text-align: center;
+        }
+
+        .match-row {
+            display: grid; grid-template-columns: 60px 140px 500px 180px 250px;
+            padding: 0 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            background: rgba(14, 4, 35, 0.2); opacity: 0;
+        }
+
+        .match-row>div { padding: 8px 10px; display: flex; align-items: center; justify-content: center; border-right: 1px solid rgba(255, 255, 255, 0.05); }
+
+        .m-id { font-family: var(--font-mono); font-size: 14px; color: rgba(255, 255, 255, 0.6); }
+        .m-time { font-size: 13px; color: #fff; font-weight: 600; text-align: center; }
+        .m-team { font-family: var(--font-display); font-size: 20px; color: #fff; text-transform: uppercase; width: 100%; justify-content: space-between !important; }
+        .vs-label { text-transform: lowercase; font-size: 0.75em; opacity: 0.6; margin: 0 8px; font-weight: 700; }
+        .m-flag { width: 35px; height: 22px; border: 1px solid rgba(255, 255, 255, 0.2); }
+        .m-score { font-family: var(--font-mono); font-size: 16px; color: var(--accent-yellow); font-weight: 700; }
+        .m-status { font-size: 13px; color: #fff; font-weight: 500; text-align: center; }
+
+        .sc-watermark { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 400px; opacity: 0.1; z-index: 0; pointer-events: none; filter: grayscale(1) brightness(1.5); }
+    </style>
+</head>
+
+<body>
+    <div class="broadcast-canvas">
+        <div id="fixtures-master">
+            <div class="fixtures-header">
+                <div class="fixtures-header-title">TOURNAMENT FIXTURES</div>
+            </div>
+            <div class="fixtures-body-wrapper">
+                <img src="https://upload.wikimedia.org/wikipedia/en/thumb/f/fa/2026_ICC_Men%27s_T20_World_Cup_logo.svg/1280px-2026_ICC_Men%27s_T20_World_Cup_logo.svg.png" class="sc-watermark" alt="">
+                <div class="table-head">
+                    <div class="th-label">M#</div>
+                    <div class="th-label">Schedule</div>
+                    <div class="th-label">Matchup</div>
+                    <div class="th-label">Score</div>
+                    <div class="th-label">Status</div>
+                </div>
+                <div id="fixtures-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.show = function (data) {
+            if (data) window.updateGraphic(data);
+            const master = document.getElementById('fixtures-master');
+            
+            gsap.killTweensOf(master);
+            gsap.set(master, { visibility: 'visible', opacity: 0, scale: 0.95 });
+
+            const tl = gsap.timeline({ defaults: { ease: 'power3.out', duration: 1.5 } });
+            tl.to(master, { opacity: 1, scale: 1 });
+            
+            setTimeout(() => {
+                const rows = document.querySelectorAll('.match-row');
+                gsap.set(rows, { opacity: 0, x: -50 });
+                gsap.to(rows, { opacity: 1, x: 0, stagger: 0.25, duration: 1.2, ease: 'power2.out' });
+            }, 100);
+        };
+
+        window.hide = function () {
+            gsap.to('#fixtures-master', { opacity: 0, scale: 0.95, duration: 1.0, ease: 'power3.in', onComplete: () => {
+                gsap.set('#fixtures-master', { visibility: 'hidden' });
+            }});
+        };
+
+        window.updateGraphic = function (inputData) {
+            if (!inputData) return;
+            const dataArr = Array.isArray(inputData) ? inputData : (inputData.data || []);
+            const container = document.getElementById('fixtures-container');
+            container.innerHTML = '';
+            
+            dataArr.forEach(m => {
+                const row = document.createElement('div');
+                row.className = 'match-row';
+                const t1 = m.team1 || m.teamA || {};
+                const t2 = m.team2 || m.teamB || {};
+                const startTime = m.startTime ? new Date(m.startTime).toLocaleDateString() : 'TBD';
+                
+                row.innerHTML = `
+                    <div class="m-id">#${(m.id || m.matchId || 0).toString().padStart(2, '0')}</div>
+                    <div class="m-time">${startTime}</div>
+                    <div class="m-team">
+                        <img src="${t1.logo || ''}" class="m-flag">
+                        <span>${t1.name || "TBD"} <span class="vs-label">vs</span> ${t2.name || "TBD"}</span>
+                        <img src="${t2.logo || ''}" class="m-flag">
+                    </div>
+                    <div class="m-score">${m.status === 'LIVE' ? "LIVE" : "vs"}</div>
+                    <div class="m-status">${m.status || "Scheduled"}</div>
+                `;
+                container.appendChild(row);
+            });
+        };
+
+        window.onload = async () => {
+            try {
+                const res = await fetch('http://localhost:3000/api/graphics/phase1/all-matches');
+                const json = await res.json();
+                window.updateGraphic(json.data || json);
+            } catch (e) { console.error("Initial fetch failed", e); }
+        };
+
+        window.addEventListener('message', (e) => { if (e.data === 'HIDE') window.hide(); });
+    </script>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io('http://localhost:3000');
+        socket.on('graphic_event', (p) => {
+            const isTarget = (p.graphic === 'all_matches' || p.graphic === 'all-matches' || p.graphic === 'all_match');
+            if (isTarget) {
+                if (p.type === 'show' || p.type === 'update') {
+                    if (p.data) window.updateGraphic(p.data);
+                    const master = document.getElementById('fixtures-master');
+                    if (window.getComputedStyle(master).visibility === 'hidden') {
+                        window.show();
+                    }
+                } else if (p.type === 'hide') {
+                    window.hide();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

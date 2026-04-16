@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICC T20 WC 2026 - Bowling Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700;900&family=Roboto+Condensed:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-navy: #0e0423;
+            --accent-cyan: #00bef1;
+            --accent-pink: #ed008c;
+            --accent-yellow: #fded00;
+            --font-display: 'Oswald', sans-serif;
+            --font-body: 'Roboto Condensed', sans-serif;
+            --font-mono: 'Roboto Mono', monospace;
+            --master-grad: linear-gradient(168deg, rgba(77, 3, 167, 0.95) 0%, rgba(47, 2, 106, 0.98) 100%);
+        }
+
+        * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+        body { margin: 0; padding: 0; background: transparent; overflow: hidden; width:100vw; height:100vh; display: flex; justify-content: flex-end; align-items: flex-end; padding-right: 60px; padding-bottom: 120px; }
+
+        #bowling-panel {
+            width: 380px; background: var(--primary-navy); border: 1px solid rgba(255, 255, 255, 0.2);
+            border-left: 6px solid var(--accent-pink); border-radius: 12px; box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+            position: relative; overflow: hidden; visibility: hidden; opacity: 0; backdrop-filter: blur(12px);
+        }
+        #bowling-panel::before { content: ''; position: absolute; inset: 0; background: var(--master-grad); z-index: 0; }
+
+        .header { height: 45px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; position: relative; z-index: 10; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .header-title { color: #fff; font-family: var(--font-display); font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+        .tournament-logo { height: 25px; opacity: 1; filter: brightness(2); }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); background: rgba(0,0,0,0.3); position: relative; z-index: 5; height: 75px; }
+        .stat-item { display: flex; flex-direction: column; justify-content: center; align-items: center; border-right: 1px solid rgba(255,255,255,0.1); opacity: 0; }
+        .stat-item:last-child { border-right: none; }
+        .stat-label { color: var(--accent-cyan); font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 2px; }
+        .stat-value { color: #fff; font-family: var(--font-display); font-size: 22px; font-weight: 700; }
+        .stat-value.highlight { color: var(--accent-yellow); }
+
+        .overs-bar { height: 40px; background: rgba(0,0,0,0.5); display: flex; align-items: center; padding: 0 15px; position: relative; z-index: 5; border-top: 1px solid rgba(255,255,255,0.05); }
+        .overs-label { color: var(--accent-pink); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; width: 80px; }
+        .balls-row { display: flex; gap: 8px; flex: 1; justify-content: flex-end; }
+        
+        .ball-dot { width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: #fff; transform: scale(0); }
+        .ball-dot.w { background: var(--accent-pink); border-color: #fff; box-shadow: 0 0 10px rgba(237, 0, 140, 0.4); }
+        .ball-dot.r4, .ball-dot.r6 { background: var(--accent-cyan); border-color: #fff; box-shadow: 0 0 10px rgba(0, 190, 241, 0.4); }
+
+        .footer-branding { height: 25px; background: rgba(0,0,0,0.7); display: flex; align-items: center; padding: 0 20px; position: relative; z-index: 5; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.05); }
+        .brand-text { color: rgba(255,255,255,0.4); font-size: 9px; text-transform: uppercase; font-weight: 700; letter-spacing: 1.5px; }
+    </style>
+</head>
+
+<body>
+    <div id="bowling-panel">
+        <div class="header">
+            <div class="header-title" id="bowler-name">...</div>
+            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/f/fa/2026_ICC_Men%27s_T20_World_Cup_logo.svg/1280px-2026_ICC_Men%27s_T20_World_Cup_logo.svg.png" class="tournament-logo">
+        </div>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <span class="stat-label">Overs</span><span class="stat-value" id="s-overs">0.0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Maidens</span><span class="stat-value" id="s-maidens">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Runs</span><span class="stat-value highlight" id="s-runs">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Wickets</span><span class="stat-value highlight" id="s-wickets">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Econ</span><span class="stat-value" id="s-econ">0.00</span>
+            </div>
+        </div>
+        <div class="overs-bar">
+            <div class="overs-label">Current Over</div>
+            <div class="balls-row" id="balls-container"></div>
+        </div>
+        <div class="footer-branding">
+            <div class="brand-text">Crystal Analytics &bull; Performance Report</div>
+            <div class="brand-text">LIVE</div>
+        </div>
+    </div>
+
+    <script>
+        function calculateEconomy(runs, overs) {
+            try {
+                if (!overs) return "0.00";
+                const overStr = overs.toString();
+                let totalOversDecimal = 0;
+                if (overStr.includes('.')) {
+                    const parts = overStr.split('.');
+                    const fullOvers = parseInt(parts[0]) || 0;
+                    const balls = parseInt(parts[1]) || 0;
+                    totalOversDecimal = fullOvers + (balls / 6);
+                } else { totalOversDecimal = parseFloat(overs) || 0; }
+                return totalOversDecimal > 0 ? (runs / totalOversDecimal).toFixed(2) : "0.00";
+            } catch(e) { return "0.00"; }
+        }
+
+        window.updateGraphic = function (payload) {
+            const data = payload.data || payload;
+            const b = data.currentBowler || data;
+            if (!b) return;
+
+            document.getElementById('bowler-name').textContent = b.playerName || '';
+            document.getElementById('s-overs').textContent = b.overNumber || '0.0';
+            document.getElementById('s-maidens').textContent = b.maidens ?? 0;
+            document.getElementById('s-runs').textContent = b.runs ?? 0;
+            document.getElementById('s-wickets').textContent = b.wickets ?? 0;
+            document.getElementById('s-econ').textContent = calculateEconomy(b.runs || 0, b.overNumber || 0);
+
+            const ballBox = document.getElementById('balls-container');
+            if (ballBox) {
+                ballBox.innerHTML = '';
+                (b.balls || []).forEach((ball, idx) => {
+                    const dot = document.createElement('div');
+                    dot.className = 'ball-dot';
+                    if (ball.toLowerCase().includes('w')) dot.classList.add('w');
+                    else if (ball === '4') dot.classList.add('r4');
+                    else if (ball === '6') dot.classList.add('r6');
+                    dot.textContent = ball;
+                    ballBox.appendChild(dot);
+                    gsap.to(dot, { scale:1, duration:0.3, delay: idx * 0.05, ease:"back.out(2)" });
+                });
+            }
+        };
+
+        window.show = function (data) {
+            if (data) window.updateGraphic(data);
+            const panel = document.getElementById('bowling-panel');
+            const items = document.querySelectorAll('.stat-item');
+            
+            gsap.killTweensOf([panel, items]);
+            gsap.set(panel, { visibility: 'visible', opacity: 0, scaleY: 0, transformOrigin: "bottom" });
+            gsap.set(items, { opacity: 0, y: 20 });
+
+            const tl = gsap.timeline();
+            tl.to(panel, { opacity: 1, scaleY: 1, duration: 0.8, ease: "power4.out" })
+              .to(items, { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: "power2.out" }, "-=0.4");
+        };
+
+        window.hide = function () {
+            gsap.to("#bowling-panel", { opacity: 0, scaleY: 0, transformOrigin: "bottom", duration: 0.6, ease: "power4.in", onComplete: () => gsap.set("#bowling-panel", { visibility: 'hidden' }) });
+        };
+        
+        window.addEventListener('message', (e) => {
+            const d = e.data;
+            if (d === 'HIDE' || d.type === 'HIDE') window.hide();
+            else if (d.type === 'SHOW') window.show(d.data);
+            else if (d.type === 'UPDATE') window.updateGraphic(d.data);
+        });
+
+    </script>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+    <script>
+        const socket = (typeof io !== 'undefined') ? io('http://localhost:3000') : null;
+        if (socket) {
+            socket.on('graphic_event', (p) => {
+                if (p.graphic === 'bowling_panel' || p.graphic === 'bowling-panel') {
+                    if (p.type === 'show') window.show(p.data);
+                    else if (p.type === 'update') {
+                        window.updateGraphic(p.data);
+                        if (window.getComputedStyle(document.getElementById('bowling-panel')).visibility === 'hidden') window.show(p.data);
+                    } else if (p.type === 'hide') window.hide();
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, height=1080">
+  <title>dls_par</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700;900&family=Roboto+Condensed:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap"
+    rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    :root {
+      /* SAFE AREA */
+      --safe-left: 96px;
+      --safe-right: 96px;
+      --safe-top: 54px;
+      --safe-bottom: 54px;
+
+      /* COLORS & THEME */
+      --blue-main: #4d03a7;
+      /* Deep Navy matching all_matches */
+      --cyan-bright: #00bef1;
+      --text-label: rgba(255, 255, 255, 0.85);
+      --border-white: rgba(255, 255, 255, 0.15);
+      /* Softer glass border */
+      --font-display: 'Oswald', sans-serif;
+      --font-body: 'Roboto Condensed', sans-serif;
+      --shadow-premium: 0 12px 36px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.25);
+      --geo-texture: linear-gradient(135deg, rgba(0, 190, 241, 0.4) 0%, rgba(0, 229, 255, 0.15) 30%, transparent 50%);
+    }
+
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      /* background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 5%), linear-gradient(180deg, rgba(251, 63, 63, 0.3) 0%, rgba(77, 3, 167, 0.1) 100%); */
+      position: relative;
+      display: flex;
+      justify-content: flex-start;
+      align-items: flex-end;
+      padding-top: clamp(16px, 4vw, 60px);
+      padding-right: clamp(16px, 6vw, 100px);
+      padding-bottom: clamp(60px, 6vw, 120px);
+      padding-left: clamp(16px, 6vw, 100px);
+    }
+
+    /* ── DLS PAR GRAPHIC ── */
+    #dls-par-graphic {
+      position: relative;
+      display: none;
+      flex-direction: column;
+      background: var(--blue-main);
+      /* backdrop-filter: blur(8px); */
+      border: 1px solid var(--border-white);
+      border-left: 8px solid #f10097;
+      padding: 7px 28px;
+      /* box-shadow: var(--shadow-premium); */
+      overflow: hidden;
+      border-radius: 6px;
+    }
+
+    #dls-par-graphic::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--geo-texture);
+      opacity: 0.2;
+      pointer-events: none;
+    }
+
+    .dls-label {
+      font-family: var(--font-body);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-label);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .dls-val {
+      font-family: var(--font-display);
+      font-size: 40px;
+      font-weight: 700;
+      color: var(--cyan-bright);
+      line-height: 1;
+      position: relative;
+      z-index: 2;
+      text-shadow: 0 2px 10px rgba(0, 190, 241, 0.3);
+    }
+
+    .dls-row {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .dls-sub {
+      font-family: var(--font-body);
+      font-size: 16px;
+      color: var(--text-label);
+      position: relative;
+      z-index: 2;
+    }
+
+    .sc-watermark {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      height: auto;
+      opacity: 0.1;
+      z-index: 0;
+      pointer-events: none;
+      filter: grayscale(1) brightness(1.5);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- DLS PAR -->
+  <div id="dls-par-graphic">
+    <div class="dls-label">DLS Par Score</div>
+    <div class="dls-row">
+      <div class="dls-val">148</div>
+      <div class="dls-sub">At 15.0 Overs (3 Wkts)</div>
+    </div>
+  </div>
+
+  <script>
+    // Start visible if it fails
+    document.getElementById('dls-par-graphic').style.display = 'flex';
+    gsap.set('#dls-par-graphic', { opacity: 0 });
+
+    setTimeout(() => { showGraphic(); }, 50);
+
+    function showGraphic() {
+      gsap.fromTo('#dls-par-graphic',
+        { x: -50, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.5, ease: 'back.out(1.5)', display: 'flex' }
+      );
+    }
+
+    function hideGraphic() {
+      gsap.to('#dls-par-graphic', { opacity: 0, x: -50, duration: 0.4, ease: 'power2.in', display: 'none' });
+    }
+
+    window.updateGraphicName = function (data) {
+      try {
+        const parsed = typeof data === "string" ? JSON.parse(data) : data;
+        if (parsed.status === "hide" || parsed.hide) {
+          hideGraphic();
+        } else {
+          showGraphic();
+        }
+      } catch (e) {
+        // Ignore
+      }
+    };
+  
+    
+
+        // === EXIT ANIMATION (Reverse of Show) ===
+
+        function hide() {
+            hideGraphic();
+        }
+
+        // === LISTEN FOR CANVAS HIDE COMMAND ===
+        window.addEventListener('message', (e) => {
+            if (e.data === 'HIDE') hide();
+        });
+    </script>
+</body>
+
+</html>

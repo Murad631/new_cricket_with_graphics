@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>Playing XI - ICC Broadcast</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700;900&family=Roboto+Condensed:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <style>
+        :root {
+            --primary-navy: #4d03a7;
+            --primary-navy-deep: #4d03a7;
+            --accent-yellow: #fded00;
+            --accent-cyan: #00bef1;
+            --accent-pink: #ed008c;
+            --text-white: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.7);
+            --font-display: 'Oswald', sans-serif;
+            --font-body: 'Roboto Condensed', sans-serif;
+            --font-mono: 'Roboto Mono', monospace;
+            --glass-shine: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --glass-bg: rgba(0, 0, 0, 0.47);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            background: transparent;
+            font-family: var(--font-body);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 54px;
+            padding-bottom: 115px; /* keep above bottom scoreboard/lower-third */
+            box-sizing: border-box;
+            margin: 0;
+        }
+
+        .broadcast-canvas {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0;
+            z-index: 100;
+        }
+
+        /* MASTER WRAPPER (Scaled slightly larger to fill 950x350) */
+        #playing-xi {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            background: transparent;
+            overflow: visible;
+        }
+
+        .xi-master-wrapper {
+            position: relative; width: 950px;
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+            margin-top: 0;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        }
+
+        /* HEADER */
+        .xi-top-header {
+            width: 100%;
+            height: 40px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            background: linear-gradient(90deg, var(--accent-pink), #ff30a1);
+            border-top: 2px solid var(--accent-cyan);
+            border-bottom: 2px solid var(--accent-cyan);
+            position: relative; opacity: 0;
+            /* GSAP start */
+        }
+
+        .xi-top-header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40%;
+            background: var(--glass-shine);
+        }
+
+        .xi-header-info {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .xi-header-logo {
+            height: 32px;
+            filter: drop-shadow(0 0 4px rgba(0, 0, 0, .4));
+        }
+
+        .xi-header-text-main {
+            font-family: var(--font-display);
+            font-size: 28px;
+            color: var(--text-white);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            line-height: 1;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+        }
+
+        .xi-fantasy-banner {
+            display: flex;
+            align-items: stretch;
+            height: 28px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .xi-fantasy-brand {
+            background: var(--text-white);
+            color: var(--primary-navy);
+            font-family: var(--font-display);
+            font-size: 14px;
+            font-weight: 700;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            text-transform: uppercase;
+        }
+
+        .xi-fantasy-label {
+            background: linear-gradient(180deg, var(--primary-navy) 0%, var(--primary-navy-deep) 100%);
+            color: var(--text-white);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 0 14px;
+            display: flex;
+            align-items: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* LAYOUT BODY: Captain Left, Grid Right */
+        .xi-layout-body {
+            display: flex;
+            flex-direction: row;
+            gap: 0;
+            padding: 0;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 5%), linear-gradient(180deg, rgba(251, 63, 63, 0.3) 0%, rgba(77, 3, 167, 0.1) 100%); position: relative; z-index: 10;
+            height: 450px;
+            opacity: 0;
+            /* GSAP */
+        }
+
+        .xi-captain-zone {
+            width: 240px;
+            min-width: 240px;
+            position: relative; display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            /* border-right: 2px solid var(--accent-cyan);
+            background: var(--primary-navy-deep); */
+            opacity: 0;
+            /* GSAP */
+        }
+
+        .xi-captain-photo-side {
+            width: 100%;
+            flex: 1;
+            position: relative; overflow: hidden;
+            background: var(--primary-navy);
+        }
+
+        .xi-captain-portrait {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top center;
+            display: block;
+            opacity: 0;
+            /* GSAP */
+        }
+
+        .xi-cap-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 32px;
+            height: 32px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: var(--font-display);
+            font-size: 18px;
+            color: var(--primary-navy-deep);
+            z-index: 20;
+        }
+
+        .xi-captain-nameplate {
+            flex-shrink: 0;
+            background: linear-gradient(90deg, var(--accent-pink), #ff30a1);
+            border-top: 2px solid var(--accent-cyan);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 8px;
+            gap: 2px;
+            z-index: 10;
+            position: relative; opacity: 0;
+            /* GSAP */
+        }
+
+        .xi-cap-name-text {
+            font-family: var(--font-display);
+            font-size: 20px;
+            color: var(--text-white);
+            line-height: 1;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+        }
+
+        .xi-cap-tag {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent-yellow);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        /* THE 10-PLAYER GRID */
+        .xi-right-content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgb(0 0 0 / 33%);
+        }
+
+        .xi-list-zone {
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 3px;
+            padding: 3px;
+        }
+
+        .xi-player-card {
+            position: relative; display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            /* background: var(--primary-navy);
+                border-bottom: 2px solid var(--accent-cyan); */
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            opacity: 0;
+            /* GSAP STAGGER TARGET */
+        }
+
+        .xi-player-order {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            z-index: 10;
+        }
+
+        .xi-order-num {
+            font-family: var(--font-mono);
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1;
+        }
+
+        .xi-p-portrait-rect {
+            flex: 1;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.2);
+            position: relative; }
+
+        .xi-p-portrait-rect img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top;
+        }
+
+        .xi-p-portrait-rect::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30%;
+            background: linear-gradient(to bottom, transparent, rgba(5, 12, 32, 0.9));
+        }
+
+        .xi-p-details {
+            background: linear-gradient(90deg, #3a0280, var(--primary-navy));
+            padding: 8px 6px;
+            border-top: 1px solid var(--accent-cyan);
+            text-align: center;
+        }
+
+        .xi-p-name-main {
+            font-family: var(--font-display);
+            font-size: 15px;
+            color: var(--text-white);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1;
+            letter-spacing: 0.5px;
+        }
+
+        .xi-p-role-sub {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent-yellow);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        /* FOOTER */
+        #xi-footer-bars {
+            background: linear-gradient(180deg, var(--primary-navy) 0%, var(--primary-navy-deep) 100%);
+            border-top: 2px solid var(--accent-cyan);
+            border-bottom: 1px solid rgba(0, 190, 241, 0.3);
+            opacity: 0;
+            /* GSAP */
+        }
+
+        .xi-footer-row {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            padding: 8px 24px;
+            text-align: center;
+        }
+
+        /* â”€â”€ OPTIONAL SAFE-AREA OVERLAY (TV CHECK) â”€â”€
+           Use: playing_xi.html#safe-area
+        */
+        #safe-area {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            width: 1920px;
+            height: 1080px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            border-radius: 18px;
+            border: 1px dashed rgba(255, 255, 255, 0.25);
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+            display: none;
+            z-index: 99999;
+        }
+
+        #safe-area:target {
+            display: block;
+        }
+
+        #safe-area::before {
+            content: '';
+            position: absolute;
+            left: 96px;
+            right: 96px;
+            top: 54px;
+            bottom: 54px;
+            border: 1px dashed rgba(0, 190, 241, 0.85);
+        }
+    
+        .sc-watermark {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            height: auto;
+            opacity: 0.1;
+            z-index: 0;
+            pointer-events: none;
+            filter: grayscale(1) brightness(1.5);
+        }
+    </style>
+    <style>
+        body * { box-shadow: none !important; }
+    </style>
+</head>
+
+<body>
+
+    <div id="safe-area" aria-hidden="true"></div>
+
+    <div class="broadcast-canvas">
+        <div id="playing-xi">
+            <div class="xi-master-wrapper">
+
+                <div class="xi-top-header">
+                    <div class="xi-header-info">
+                        <!-- Left-aligned team marker (Fallback to India as default display demo) -->
+                        <img src="https://static.cricinfo.com/db/PICTURES/CMS/313100/313128.logo.png"
+                            class="xi-header-logo" alt="INDIA">
+                        <div class="xi-header-text-main" id="header-squad-name">INDIA SQUAD</div>
+                    </div>
+
+                    <div class="xi-fantasy-banner">
+                        <div class="xi-fantasy-brand">ICC WORLD CUP</div>
+                        <div class="xi-fantasy-label">Starting Lineup</div>
+                    </div>
+                </div>
+
+                <div class="xi-layout-body">
+
+                    <!-- LEFT COLUMN: Captain Hero Block -->
+                    <div class="xi-captain-zone">
+                        <div class="xi-cap-badge">C</div>
+                        <div class="xi-captain-photo-side">
+                            <img src="https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" alt="Captain"
+                                class="xi-captain-portrait">
+                        </div>
+                        <div class="xi-captain-nameplate">
+                            <div class="xi-cap-name-text">VIRAT KOHLI</div>
+                            <div class="xi-cap-tag">CAPTAIN â€¢ BATTER</div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT COLUMN: 10 Player Grid -->
+                    <div class="xi-right-content-area">
+                        <div class="xi-list-zone" id="xi-player-grid">
+                            <!-- JS Will Inject 10 remaining players here dynamically -->
+                        </div>
+                    </div>
+
+                </div>
+
+                <div id="xi-footer-bars">
+                    <div class="xi-footer-row" id="xi-footer-text">MATCHDAY XI</div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample 11-man team. Index 0 is Captain.
+        const graphicData = {
+            teamName: "INDIA SQUAD",
+            teamLogo: "https://static.cricinfo.com/db/PICTURES/CMS/313100/313128.logo.png",
+            captain: {
+                name: "VIRAT KOHLI",
+                role: "BATTER",
+                img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png"
+            },
+            players: [
+                { name: "ROHIT SHARMA", role: "BATTER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
+                { name: "S. GILL", role: "BATTER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
+                { name: "S. IYER", role: "BATTER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
+                { name: "KL RAHUL", role: "WK BATTER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
+                { name: "H. PANDYA", role: "ALL-ROUNDER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
+                { name: "R. JADEJA", role: "ALL-ROUNDER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
+                { name: "M. SHAMI", role: "BOWLER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
+                { name: "J. BUMRAH", role: "BOWLER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
+                { name: "K. YADAV", role: "BOWLER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
+                { name: "M. SIRAJ", role: "BOWLER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" }
+            ]
+        };
+
+        function renderPlayers() {
+            const grid = document.getElementById('xi-player-grid');
+            grid.innerHTML = '';
+
+            graphicData.players.forEach((p, i) => {
+                const card = document.createElement('div');
+                card.className = 'xi-player-card';
+                card.innerHTML = `
+                    <div class="xi-player-order"><span class="xi-order-num">${i + 2}</span></div>
+                    <div class="xi-p-portrait-rect">
+                        <img src="${p.img}" alt="${p.name}">
+                    </div>
+                    <div class="xi-p-details">
+                        <div class="xi-p-name-main">${p.name}</div>
+                        <div class="xi-p-role-sub">${p.role}</div>
+                    </div>`;
+                grid.appendChild(card);
+            });
+        }
+
+        function show() {
+            // Implementation of the precise GSAP timeline defined in final.html
+            const tl = gsap.timeline();
+
+            tl.fromTo('.xi-top-header', { y: 0, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out' })
+                .fromTo('.xi-layout-body', { scaleY: 0, transformOrigin: 'top', opacity: 0 }, { scaleY: 1, opacity: 1, duration: 0.7, ease: 'power3.out' }, '-=0.3')
+                .fromTo('.xi-captain-zone', { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4, ease: 'power2.out' }, '-=0.2')
+                .fromTo('.xi-captain-portrait', { y: 0, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: 'power2.out' }, '-=0.2')
+                .fromTo('.xi-captain-nameplate', { opacity: 0 }, { opacity: 1, duration: 0.4 }, '-=0.2')
+                .fromTo('.xi-player-card', { y: 0, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, stagger: 0.05, ease: 'power2.out' }, '-=0.3')
+                .fromTo('#xi-footer-bars', { y: 0, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: 'power2.out' }, '-=0.3');
+        }
+        function hide() {
+            const tl = gsap.timeline({ defaults: { ease: 'power2.in' } });
+            tl.to('#xi-footer-bars', { opacity: 0, duration: 0.25 })
+                .to('.xi-player-card', { opacity: 0, duration: 0.3, stagger: 0.04 }, '-=0.1')
+                .to('.xi-captain-nameplate', { opacity: 0, duration: 0.25 }, '-=0.15')
+                .to('.xi-captain-portrait', { opacity: 0, duration: 0.25 }, '-=0.15')
+                .to('.xi-captain-zone', { opacity: 0, x: -20, duration: 0.35 }, '-=0.1')
+                .to('.xi-layout-body', { scaleY: 0, transformOrigin: 'top', opacity: 0, duration: 0.5, ease: 'power3.in' }, '-=0.15')
+                .to('.xi-top-header', { opacity: 0, duration: 0.4 }, '-=0.25');
+        }
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPlayers();
+            show();
+        });
+    
+    
+
+        // === LISTEN FOR CANVAS HIDE COMMAND ===
+        window.addEventListener('message', (e) => {
+            if (e.data === 'HIDE') hide();
+        });
+    </script>
+</body>
+
+</html>

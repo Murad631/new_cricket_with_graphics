@@ -1,0 +1,41 @@
+/* DEFAULT FONT */
+#scoreboard text {
+    font-family: 'Montserrat', sans-serif;
+    fill: #ffffff;
+}
+
+/* PLAYERS */
+#player1, #player2 {
+    fill: #ffffff;
+    font-size: 44px;
+    font-weight: 500;
+}
+
+#player1_runs, #player2_runs {
+    fill: #ffd200;
+    font-size: 52px;
+    font-weight: 700;
+}
+
+#player1_balls, #player2_balls {
+    fill: #cccccc;
+    font-size: 40px;
+}
+
+/* TEAM NAMES */
+#batting_team_name {
+    fill: #ffffff;
+}
+
+#bowlling_team_name {
+    fill: #ff4444;
+}
+
+/* SCORE */
+#total_runs {
+    fill: #ffffff;
+}
+
+#outs {
+    fill: #ff3333;
+}

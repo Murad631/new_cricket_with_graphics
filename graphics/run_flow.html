@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>Run Flow - ICC Broadcast</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700;900&family=Roboto+Condensed:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <style>
+        :root {
+            --primary-navy: #0e0423;
+            --primary-navy-deep: #08021a;
+            --accent-cyan: #00bef1;
+            --accent-pink: #ed008c;
+            --accent-yellow: #fded00;
+            --text-white: #ffffff;
+            --font-display: 'Oswald', sans-serif;
+            --font-body: 'Roboto Condensed', sans-serif;
+            --master-grad: linear-gradient(180deg, rgba(237, 0, 140, 0.45) 0%, rgba(77, 3, 167, 0.2) 100%);
+            --crystal-border-strong: rgba(255, 255, 255, 0.42);
+            --crystal-shine-top: rgba(255, 255, 255, 0.18);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+        body {
+            width: 100vw; height: 100vh; overflow: hidden; background: transparent;
+            display: flex; justify-content: center; align-items: center; font-family: var(--font-body);
+        }
+
+        #flow-container {
+            width: 950px; height: 500px; background: var(--primary-navy); background-image: var(--master-grad);
+            border: 1px solid rgba(255, 255, 255, 0.2); border-left: 4px solid var(--accent-pink);
+            border-top: 1px solid var(--crystal-border-strong); position: relative; opacity: 0;
+            box-shadow: 0 40px 110px rgba(0, 0, 0, 0.75); backdrop-filter: blur(12px) saturate(1.5);
+            transform: perspective(1000px) rotateX(10deg);
+        }
+
+        .chart-header {
+            height: 45px; background: linear-gradient(90deg, var(--accent-pink) 0%, #ff30a1 100%);
+            display: flex; align-items: center; justify-content: space-between; padding: 0 30px;
+            border-bottom: 2px solid var(--accent-cyan); position: relative; z-index: 10;
+        }
+
+        .header-title { color: #fff; font-family: var(--font-display); font-size: 22px; font-weight: 700; text-transform: uppercase; letter-spacing: 4px; }
+
+        .chart-area { flex: 1; position: relative; padding: 40px 60px 20px 80px; height: 350px; }
+        .y-axis { position: absolute; left: 20px; top: 40px; bottom: 20px; display: flex; flex-direction: column; justify-content: space-between; font-size: 16px; font-weight: 700; color: #fff; width: 40px; }
+        .grid-lines { position: absolute; inset: 40px 60px 20px 80px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+        .line { width: 100%; height: 1px; background: rgba(255, 255, 255, 0.1); transform: scaleX(0); transform-origin: left; }
+        .flow-svg { width: 100%; height: 100%; overflow: visible; }
+        .team-path { fill: none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 4000; stroke-dashoffset: 4000; }
+        .ind-path { stroke: var(--accent-yellow); filter: drop-shadow(0 0 8px rgba(253, 237, 0, 0.4)); }
+        .pak-path { stroke: var(--accent-cyan); filter: drop-shadow(0 0 8px rgba(0, 190, 241, 0.4)); }
+        .score-dot { fill: #fff; opacity: 0; stroke-width: 3; stroke: white; }
+
+        .x-axis { height: 50px; display: flex; justify-content: space-between; padding: 5px 60px 0 80px; font-size: 15px; font-weight: 700; color: white; text-transform: uppercase; }
+        .x-axis span { opacity: 0; transform: translateY(10px); }
+
+        .chart-footer {
+            height: 55px; background: linear-gradient(90deg, rgba(77, 3, 167, 0.95) 0%, rgba(50, 0, 120, 0.95) 100%);
+            display: flex; align-items: center; justify-content: space-between; padding: 0 25px;
+            border-top: 1px solid rgba(0, 190, 241, 0.3); opacity: 0;
+        }
+
+        .projected-box { display: flex; align-items: center; gap: 10px; }
+        .proj-lbl { color: var(--accent-cyan); font-weight: 700; font-size: 14px; text-transform: uppercase; }
+        .proj-val { color: var(--accent-yellow); font-family: var(--font-display); font-size: 26px; font-weight: 700; }
+    </style>
+</head>
+
+<body>
+    <div id="flow-container">
+        <div class="chart-header">
+            <div class="header-title">Run Flow Progression</div>
+            <div style="color:white; font-weight:700; letter-spacing:2px; font-size:14px;" id="match-type">T20 INTERNATIONAL</div>
+        </div>
+
+        <div class="chart-area">
+            <div class="y-axis" id="y-axis-labels">
+                <span>250</span><span>200</span><span>150</span><span>100</span><span>50</span><span>0</span>
+            </div>
+            <div class="grid-lines">
+                <div class="line"></div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"></div>
+            </div>
+            <svg class="flow-svg" viewBox="0 0 810 290" preserveAspectRatio="none">
+                <path id="ind-flow" class="team-path ind-path" d=""></path>
+                <path id="pak-flow" class="team-path pak-path" d=""></path>
+                <circle id="ind-point" class="score-dot" r="6" />
+                <circle id="pak-point" class="score-dot" r="6" />
+            </svg>
+        </div>
+
+        <div class="x-axis" id="x-axis-labels">
+            <span>0</span><span>5</span><span>10</span><span>15</span><span>20</span>
+        </div>
+
+        <div class="chart-footer">
+            <div class="projected-box">
+                <span class="proj-lbl">Projected Score</span>
+                <span class="proj-val" id="proj-val">180</span>
+            </div>
+            <div style="color: rgba(255,255,255,0.4); font-size: 11px; text-transform: uppercase;">Crystal Analytics &bull; Live Progression</div>
+        </div>
+    </div>
+
+    <script>
+        let config = { maxOvers: 20, maxScore: 250 };
+
+        function buildPaths(data) {
+            const width = 810;
+            const height = 290;
+            let indD = "M 0 " + height;
+            let pakD = "M 0 " + height;
+
+            const inn1 = [0], inn2 = [0];
+            let t1 = 0, t2 = 0;
+            data.overs.filter(o => o.inningsId === 1).sort((a,b)=>a.overNumber-b.overNumber).forEach(o => { t1 += o.runs; inn1.push(t1); });
+            data.overs.filter(o => o.inningsId > 1).sort((a,b)=>a.overNumber-b.overNumber).forEach(o => { t2 += o.runs; inn2.push(t2); });
+
+            inn1.forEach((s, i) => {
+                const x = (i / config.maxOvers) * width;
+                const y = height - (s / config.maxScore * height);
+                indD += ` L ${x} ${y}`;
+                if (i === inn1.length - 1) gsap.set("#ind-point", { cx: x, cy: y });
+            });
+
+            inn2.forEach((s, i) => {
+                const x = (i / config.maxOvers) * width;
+                const y = height - (s / config.maxScore * height);
+                pakD += ` L ${x} ${y}`;
+                if (i === inn2.length - 1) gsap.set("#pak-point", { cx: x, cy: y });
+            });
+
+            const iPath = document.getElementById('ind-flow');
+            const pPath = document.getElementById('pak-flow');
+            iPath.setAttribute('d', indD);
+            pPath.setAttribute('d', pakD);
+
+            const iLen = iPath.getTotalLength();
+            const pLen = pPath.getTotalLength();
+            gsap.set([iPath, pPath], { strokeDasharray: 4000, strokeDashoffset: 4000 });
+            iPath.dataset.len = iLen;
+            pPath.dataset.len = pLen;
+        }
+
+        window.show = function(data) {
+            if (data) window.updateGraphic(data);
+            const tl = gsap.timeline();
+            const iPath = document.getElementById('ind-flow');
+            const pPath = document.getElementById('pak-flow');
+
+            gsap.set("#flow-container", { y: 60, opacity: 0, scale: 0.95, rotationX: 10 });
+            gsap.set(".line", { scaleX: 0 });
+            gsap.set(".x-axis span", { opacity: 0, y: 10 });
+
+            tl.to("#flow-container", { duration: 1.2, y: 0, opacity: 1, scale: 1, rotationX: 0, ease: "expo.out" })
+              .to(".line", { duration: 0.8, scaleX: 1, stagger: 0.1, ease: "power2.out" }, "-=0.8")
+              .to(".x-axis span", { opacity: 1, y: 0, stagger: 0.05 }, "-=0.5")
+              .to(iPath, { duration: 2.5, strokeDasharray: iPath.dataset.len, strokeDashoffset: 0, ease: "power2.inOut" }, "-=0.2")
+              .to(pPath, { duration: 2.5, strokeDasharray: pPath.dataset.len, strokeDashoffset: 0, ease: "power2.inOut" }, "-=2.0")
+              .to(".score-dot", { opacity: 1, scale: 1.5, duration: 0.4 })
+              .to(".score-dot", { scale: 1, duration: 0.2 })
+              .to(".chart-footer", { opacity: 1, duration: 0.5 }, "-=0.5");
+        };
+
+        window.hide = function() {
+            gsap.to("#flow-container", { y: 60, opacity: 0, rotationX: 10, duration: 0.8, ease: "power2.in", onComplete: () => gsap.set("#flow-container", { visibility: 'hidden' }) });
+        };
+
+        window.updateGraphic = function(data) {
+            if (!data) return;
+            config.maxOvers = data.totalOvers || 20;
+            document.getElementById('match-type').textContent = (data.matchFormat || 'T20') + " INTERNATIONAL";
+            document.getElementById('proj-val').textContent = data.projectedScore || '0';
+            
+            const xAxis = document.getElementById('x-axis-labels');
+            xAxis.innerHTML = `<span>0</span><span>${Math.round(config.maxOvers/4)}</span><span>${Math.round(config.maxOvers/2)}</span><span>${Math.round(config.maxOvers*0.75)}</span><span>${config.maxOvers}</span>`;
+            
+            buildPaths(data);
+            const iPath = document.getElementById('ind-flow');
+            const pPath = document.getElementById('pak-flow');
+            if (window.getComputedStyle(document.getElementById('flow-container')).opacity > 0) {
+                gsap.to(iPath, { strokeDasharray: iPath.dataset.len, strokeDashoffset: 0, duration: 1.5, ease: "power2.out" });
+                gsap.to(pPath, { strokeDasharray: pPath.dataset.len, strokeDashoffset: 0, duration: 1.5, ease: "power2.out" });
+            }
+        };
+
+        window.onload = async () => {
+            let matchId = new URLSearchParams(window.location.search).get('matchId') || 4;
+            try {
+                const res = await fetch(`http://localhost:3000/api/graphics/phase1/run-flow/${matchId}`);
+                if (res.ok) {
+                    const json = await res.json();
+                    window.updateGraphic(json.data || json);
+                }
+            } catch (e) {}
+            window.show();
+        };
+        window.addEventListener('message', (e) => { if (e.data === 'HIDE') window.hide(); });
+    </script>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io('http://localhost:3000');
+        socket.on('graphic_event', (p) => {
+            if (p.graphic === 'run_flow') {
+                if (p.type === 'show' || p.type === 'update') {
+                    window.updateGraphic(p.data);
+                    if (window.getComputedStyle(document.getElementById('flow-container')).opacity == 0) window.show(p.data);
+                } else if (p.type === 'hide') window.hide();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICC T20 WC 2026 - Bowling Speed</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700;900&family=Roboto+Condensed:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            /* PRESERVED USER COLORS */
+            --primary-navy: #4d03a7;
+            --accent-pink: #ed008c;
+            --accent-orange: #f26522;
+            --accent-cyan: #00bef1;
+            --text-white: #ffffff;
+
+            /* DESIGN TOKENS */
+            --font-display: 'Oswald', sans-serif;
+            --font-body: 'Roboto Condensed', sans-serif;
+            --header-grad: linear-gradient(90deg, var(--accent-pink), var(--accent-orange));
+            --shadow-premium: 0 12px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            /* background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 5%), linear-gradient(180deg, rgba(251, 63, 63, 0.3) 0%, rgba(77, 3, 167, 0.1) 100%); */
+            position: relative;
+            font-family: var(--font-body);
+        }
+
+        .broadcast-canvas {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0 96px 0 0;
+            z-index: 100;
+        }
+
+        #bowling-speed {
+            min-width: 140px;
+            width: auto;
+            background: var(--header-grad);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-right: 4px solid var(--accent-cyan);
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: var(--shadow-premium);
+            position: relative;
+            overflow: hidden;
+            visibility: hidden;
+        }
+
+        #bowling-speed::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .label-group {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            padding-right: 15px;
+        }
+
+        .speed-text {
+            color: #fff;
+            font-family: var(--font-display);
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            line-height: 1;
+        }
+
+        .speed-unit {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        .speed-value {
+            color: #fff;
+            font-family: var(--font-display);
+            font-size: 44px;
+            font-weight: 700;
+            line-height: 1;
+            text-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+            letter-spacing: -1px;
+        }
+
+        /* Glass Shine Overlay */
+        .glass-shine {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 45%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%);
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        /* â”€â”€ OPTIONAL SAFE-AREA OVERLAY (TV CHECK) â”€â”€
+           Use: bowling_speed.html#safe-area
+        */
+        #safe-area {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            width: 1920px;
+            height: 1080px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            border-radius: 18px;
+            border: 1px dashed rgba(255, 255, 255, 0.25);
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+            display: none;
+            z-index: 99999;
+        }
+
+        #safe-area:target {
+            display: block;
+        }
+
+        #safe-area::before {
+            content: '';
+            position: absolute;
+            left: 96px;
+            right: 96px;
+            top: 54px;
+            bottom: 54px;
+            border: 1px dashed rgba(0, 190, 241, 0.85);
+        }
+
+        .sc-watermark {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            height: auto;
+            opacity: 0.1;
+            z-index: 0;
+            pointer-events: none;
+            filter: grayscale(1) brightness(1.5);
+        }
+    </style>
+    <style>
+        body * {
+            box-shadow: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="safe-area" aria-hidden="true"></div>
+    <div class="broadcast-canvas">
+        <div id="bowling-speed">
+            <div class="glass-shine"></div>
+            <div class="label-group">
+                <span class="speed-text">SPEED</span>
+                <span class="speed-unit">KM</span>
+            </div>
+            <div class="speed-value">142.8</div>
+        </div>
+    </div>
+
+    <script>
+        function show() {
+            const speed = document.getElementById('bowling-speed');
+            const value = document.querySelector('.speed-value');
+            const label = document.querySelector('.label-group');
+
+            // Set initial state far to the right (offscreen relative to its normal position)
+            gsap.set(speed, { visibility: 'visible', opacity: 0, x: 300 });
+            gsap.set(value, { scale: 0.7, opacity: 0 });
+            gsap.set(label, { x: 10, opacity: 0 });
+
+            const tl = gsap.timeline({
+                defaults: { ease: 'power4.out', duration: 0.8 }
+            });
+
+            tl.to(speed, { opacity: 1, x: 0 })
+                .to(label, { x: 0, opacity: 1, duration: 0.5 }, '-=0.5')
+                .to(value, { scale: 1, opacity: 1, ease: 'back.out(2)', duration: 0.6 }, '-=0.4');
+        }
+
+        function hide() {
+            const speed = document.getElementById('bowling-speed');
+            const value = document.querySelector('.speed-value');
+            const label = document.querySelector('.label-group');
+            const tl = gsap.timeline({ defaults: { ease: 'power3.in' } });
+            tl.to(value, { scale: 0.7, opacity: 0, duration: 0.35 })
+                .to(label, { x: 10, opacity: 0, duration: 0.35 }, '-=0.2')
+                .to(speed, { opacity: 0, x: 300, duration: 0.55 }, '-=0.15');
+        }
+
+        // === LISTEN FOR CANVAS HIDE COMMAND ===
+        window.addEventListener('message', (e) => {
+            if (e.data === 'HIDE') hide();
+        });
+    </script>
+</body>
+
+</html>
