@@ -30,7 +30,7 @@ import { GraphicsModule } from './graphics/graphics.module';
       port: 3306,
       username: 'root',
       password: '',
-      database: 'cricket',
+      database: 'new_database',
       synchronize: true, // dev only
       entities: [__dirname + '/**/*.entity{.ts,.js}'], // ✅ auto detect
     }),

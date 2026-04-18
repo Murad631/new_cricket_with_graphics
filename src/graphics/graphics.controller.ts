@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Param, Query, Patch, Delete, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Patch, Delete, UseInterceptors, UploadedFile, Res } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import type { Response } from 'express';
 
 import { GraphicsService } from './graphics.service';
 import { FowSeeder } from '../seeder/seed-fow';
@@ -15,7 +16,7 @@ export class GraphicsController {
     private readonly graphicsService: GraphicsService,
     private readonly fowSeeder: FowSeeder,
     private eventEmitter: EventEmitter2
-  ) {}
+  ) { }
 
   @Get('phase1/all-matches')
   async getAllMatches() {
@@ -105,7 +106,7 @@ export class GraphicsController {
   async triggerSponsor(@Param('id') id: string) {
     const payload = await this.graphicsService.triggerSponsor(parseInt(id));
     if (payload.type === 'update') {
-        this.eventEmitter.emit('graphic_event', payload);
+      this.eventEmitter.emit('graphic_event', payload);
     }
     return payload;
   }
@@ -140,23 +141,58 @@ export class GraphicsController {
     return await this.graphicsService.listMatches();
   }
 
+  @Get('over-summary/trigger/:matchId/:inningsId/:overNumber')
+  async triggerOverSummary(
+    @Param('matchId') matchId: string,
+    @Param('inningsId') inningsId: string,
+    @Param('overNumber') overNumber: string,
+    @Res() res: Response
+  ) {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    const payload = await this.graphicsService.triggerOverSummary(
+      parseInt(matchId),
+      parseInt(inningsId),
+      parseInt(overNumber)
+    );
+    this.eventEmitter.emit('graphic_event', payload);
+    return res.json(payload);
+  }
+
   @Get('control/overs/:matchId/:inningsId')
   async listOvers(@Param('matchId') matchId: string, @Param('inningsId') inningsId: string) {
     return await this.graphicsService.listOvers(parseInt(matchId), parseInt(inningsId));
   }
 
-  @Get('phase-summary/:matchId/:inningsId')
+  @Get('phase-summary/:matchId/:inningsId') // Specific match/innings
   async getPhaseSummary(
-    @Param('matchId') matchId: string, 
+    @Param('matchId') matchId: string,
     @Param('inningsId') inningsId: string,
     @Query('start') start: string,
-    @Query('end') end: string
+    @Query('end') end: string,
+    @Query('tag') tag: string,
+    @Res() res: Response
   ) {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     const payload = await this.graphicsService.getPhaseSummary(
-        parseInt(matchId), parseInt(inningsId), parseInt(start), parseInt(end)
+      parseInt(matchId), parseInt(inningsId), parseInt(start), parseInt(end), tag
     );
     this.eventEmitter.emit('graphic_event', payload);
-    return payload;
+    return res.json(payload);
+  }
+
+  @Get('phase-summary-latest') // Auto-detect match/innings
+  async getPhaseSummaryLatest(
+    @Query('start') start: string,
+    @Query('end') end: string,
+    @Query('tag') tag: string,
+    @Res() res: Response
+  ) {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    const payload = await this.graphicsService.getPhaseSummary(
+      undefined, undefined, parseInt(start || '0'), parseInt(end || '5'), tag
+    );
+    this.eventEmitter.emit('graphic_event', payload);
+    return res.json(payload);
   }
 
   @Post('trigger-tag/:type')
