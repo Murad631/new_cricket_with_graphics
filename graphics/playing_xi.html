@@ -45,7 +45,7 @@
             justify-content: center;
             align-items: flex-start;
             padding-top: 54px;
-            padding-bottom: 115px; /* keep above bottom scoreboard/lower-third */
+            padding-bottom: 115px;
             box-sizing: border-box;
             margin: 0;
         }
@@ -60,7 +60,6 @@
             z-index: 100;
         }
 
-        /* MASTER WRAPPER (Scaled slightly larger to fill 950x350) */
         #playing-xi {
             position: absolute;
             inset: 0;
@@ -73,7 +72,8 @@
         }
 
         .xi-master-wrapper {
-            position: relative; width: 950px;
+            position: relative; 
+            width: 950px;
             background: transparent;
             display: flex;
             flex-direction: column;
@@ -81,7 +81,6 @@
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
         }
 
-        /* HEADER */
         .xi-top-header {
             width: 100%;
             height: 40px;
@@ -93,8 +92,8 @@
             background: linear-gradient(90deg, var(--accent-pink), #ff30a1);
             border-top: 2px solid var(--accent-cyan);
             border-bottom: 2px solid var(--accent-cyan);
-            position: relative; opacity: 0;
-            /* GSAP start */
+            position: relative; 
+            opacity: 0;
         }
 
         .xi-top-header::after {
@@ -160,34 +159,33 @@
             letter-spacing: 1px;
         }
 
-        /* LAYOUT BODY: Captain Left, Grid Right */
         .xi-layout-body {
             display: flex;
             flex-direction: row;
             gap: 0;
             padding: 0;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 5%), linear-gradient(180deg, rgba(251, 63, 63, 0.3) 0%, rgba(77, 3, 167, 0.1) 100%); position: relative; z-index: 10;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 5%), linear-gradient(180deg, rgba(251, 63, 63, 0.3) 0%, rgba(77, 3, 167, 0.1) 100%); 
+            position: relative; 
+            z-index: 10;
             height: 450px;
             opacity: 0;
-            /* GSAP */
         }
 
         .xi-captain-zone {
             width: 240px;
             min-width: 240px;
-            position: relative; display: flex;
+            position: relative; 
+            display: flex;
             flex-direction: column;
             overflow: hidden;
-            /* border-right: 2px solid var(--accent-cyan);
-            background: var(--primary-navy-deep); */
             opacity: 0;
-            /* GSAP */
         }
 
         .xi-captain-photo-side {
             width: 100%;
             flex: 1;
-            position: relative; overflow: hidden;
+            position: relative; 
+            overflow: hidden;
             background: var(--primary-navy);
         }
 
@@ -198,7 +196,6 @@
             object-position: top center;
             display: block;
             opacity: 0;
-            /* GSAP */
         }
 
         .xi-cap-badge {
@@ -229,8 +226,8 @@
             padding: 12px 8px;
             gap: 2px;
             z-index: 10;
-            position: relative; opacity: 0;
-            /* GSAP */
+            position: relative; 
+            opacity: 0;
         }
 
         .xi-cap-name-text {
@@ -253,7 +250,6 @@
             text-align: center;
         }
 
-        /* THE 10-PLAYER GRID */
         .xi-right-content-area {
             flex: 1;
             display: flex;
@@ -272,14 +268,12 @@
         }
 
         .xi-player-card {
-            position: relative; display: flex;
+            position: relative; 
+            display: flex;
             flex-direction: column;
             overflow: hidden;
-            /* background: var(--primary-navy);
-                border-bottom: 2px solid var(--accent-cyan); */
             border-top: 1px solid rgba(255, 255, 255, 0.05);
             opacity: 0;
-            /* GSAP STAGGER TARGET */
         }
 
         .xi-player-order {
@@ -300,7 +294,8 @@
             flex: 1;
             overflow: hidden;
             background: rgba(0, 0, 0, 0.2);
-            position: relative; }
+            position: relative; 
+        }
 
         .xi-p-portrait-rect img {
             width: 100%;
@@ -346,13 +341,11 @@
             margin-top: 2px;
         }
 
-        /* FOOTER */
         #xi-footer-bars {
             background: linear-gradient(180deg, var(--primary-navy) 0%, var(--primary-navy-deep) 100%);
             border-top: 2px solid var(--accent-cyan);
             border-bottom: 1px solid rgba(0, 190, 241, 0.3);
             opacity: 0;
-            /* GSAP */
         }
 
         .xi-footer-row {
@@ -470,38 +463,31 @@
     </div>
 
     <script>
-        // Sample 11-man team. Index 0 is Captain.
-        const graphicData = {
-            teamName: "INDIA SQUAD",
-            teamLogo: "https://static.cricinfo.com/db/PICTURES/CMS/313100/313128.logo.png",
-            captain: {
-                name: "VIRAT KOHLI",
-                role: "BATTER",
-                img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png"
-            },
-            players: [
-                { name: "ROHIT SHARMA", role: "BATTER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
-                { name: "S. GILL", role: "BATTER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
-                { name: "S. IYER", role: "BATTER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
-                { name: "KL RAHUL", role: "WK BATTER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
-                { name: "H. PANDYA", role: "ALL-ROUNDER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
-                { name: "R. JADEJA", role: "ALL-ROUNDER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
-                { name: "M. SHAMI", role: "BOWLER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
-                { name: "J. BUMRAH", role: "BOWLER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
-                { name: "K. YADAV", role: "BOWLER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" },
-                { name: "M. SIRAJ", role: "BOWLER", img: "https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png" }
-            ]
-        };
+        function renderSquad(data) {
+            // Update Header
+            if (data.teamName) document.getElementById('header-squad-name').innerText = data.teamName;
+            if (data.teamLogo) document.querySelector('.xi-header-logo').src = data.teamLogo;
 
-        function renderPlayers() {
+            // Update Captain (Hero Section)
+            if (data.captain) {
+                const cap = data.captain;
+                document.querySelector('.xi-captain-portrait').src = cap.img;
+                document.querySelector('.xi-cap-name-text').innerText = cap.name;
+                document.querySelector('.xi-cap-tag').innerText = cap.role;
+                // Badge could show batting pos if needed, keeping 'C' for now or using pos
+                document.querySelector('.xi-cap-badge').innerText = cap.pos || 'C';
+            }
+
+            // Update 10 Players Grid
             const grid = document.getElementById('xi-player-grid');
             grid.innerHTML = '';
 
-            graphicData.players.forEach((p, i) => {
+            const players = data.players || [];
+            players.forEach((p) => {
                 const card = document.createElement('div');
                 card.className = 'xi-player-card';
                 card.innerHTML = `
-                    <div class="xi-player-order"><span class="xi-order-num">${i + 2}</span></div>
+                    <div class="xi-player-order"><span class="xi-order-num">${p.order}</span></div>
                     <div class="xi-p-portrait-rect">
                         <img src="${p.img}" alt="${p.name}">
                     </div>
@@ -511,11 +497,15 @@
                     </div>`;
                 grid.appendChild(card);
             });
+
+            // Trigger Entrance Animation
+            show();
         }
 
         function show() {
-            // Implementation of the precise GSAP timeline defined in final.html
             const tl = gsap.timeline();
+            // Reset states for animation
+            gsap.set(['.xi-top-header', '.xi-layout-body', '.xi-captain-zone', '.xi-captain-portrait', '.xi-captain-nameplate', '.xi-player-card', '#xi-footer-bars'], { opacity: 0 });
 
             tl.fromTo('.xi-top-header', { y: 0, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out' })
                 .fromTo('.xi-layout-body', { scaleY: 0, transformOrigin: 'top', opacity: 0 }, { scaleY: 1, opacity: 1, duration: 0.7, ease: 'power3.out' }, '-=0.3')
@@ -525,6 +515,7 @@
                 .fromTo('.xi-player-card', { y: 0, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, stagger: 0.05, ease: 'power2.out' }, '-=0.3')
                 .fromTo('#xi-footer-bars', { y: 0, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: 'power2.out' }, '-=0.3');
         }
+
         function hide() {
             const tl = gsap.timeline({ defaults: { ease: 'power2.in' } });
             tl.to('#xi-footer-bars', { opacity: 0, duration: 0.25 })
@@ -536,19 +527,31 @@
                 .to('.xi-top-header', { opacity: 0, duration: 0.4 }, '-=0.25');
         }
 
-
-        document.addEventListener('DOMContentLoaded', () => {
-            renderPlayers();
-            show();
-        });
-    
-    
-
-        // === LISTEN FOR CANVAS HIDE COMMAND ===
         window.addEventListener('message', (e) => {
-            if (e.data === 'HIDE') hide();
+            const msg = e.data;
+            if (msg === 'HIDE' || msg.type === 'HIDE') {
+                hide();
+            } else if (msg.type === 'SHOW' || msg.type === 'UPDATE') {
+                renderSquad(msg.data);
+            } else if (msg.graphic === 'playing_xi') {
+                renderSquad(msg.data);
+            }
         });
     </script>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+    <script>
+        if (typeof io !== 'undefined') {
+            const socket = io('http://localhost:3000');
+            socket.on('graphic_event', (p) => {
+                if (p.graphic === 'playing_xi') {
+                    if (p.type === 'show' || p.type === 'update') {
+                        renderSquad(p.data);
+                    } else if (p.type === 'hide') {
+                        hide();
+                    }
+                }
+            });
+        }
+    </script>
 </body>
-
 </html>

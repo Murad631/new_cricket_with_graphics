@@ -206,4 +206,39 @@ export class GraphicsController {
   async seedFow() {
     return await this.fowSeeder.seed();
   }
+
+  @Get('leaderboard/sixes')
+  async getTopSixHitters() {
+    const payload = await this.graphicsService.getTopSixHitters();
+    this.eventEmitter.emit('graphic_event', payload);
+    return payload;
+  }
+
+  @Get('matches/list')
+  async listAllMatches() {
+    return await this.graphicsService.listAllMatches();
+  }
+
+  @Get('match-details/trigger/:matchId')
+  async triggerMatchDetails(@Param('matchId') matchId: string) {
+    const payload = await this.graphicsService.triggerMatchDetails(parseInt(matchId));
+    if (payload.type === 'update') {
+      this.eventEmitter.emit('graphic_event', payload);
+    }
+    return payload;
+  }
+
+  @Get('teams/list')
+  async listTeams() {
+    return await this.graphicsService.listTeams();
+  }
+
+  @Get('playing-xi/trigger/:matchId/:teamId')
+  async triggerPlayingXI(@Param('matchId') matchId: string, @Param('teamId') teamId: string) {
+    const payload = await this.graphicsService.triggerPlayingXI(parseInt(matchId), parseInt(teamId));
+    if (payload.type === 'update') {
+      this.eventEmitter.emit('graphic_event', payload);
+    }
+    return payload;
+  }
 }

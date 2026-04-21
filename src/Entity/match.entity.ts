@@ -27,6 +27,18 @@ export class Match {
   @Column({ type: 'varchar', length: 180, nullable: true })
   venue?: string;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  city?: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  umpire1?: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  umpire2?: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  referee?: string;
+
   @Column({ type: 'datetime', nullable: true })
   startTime?: Date;
 

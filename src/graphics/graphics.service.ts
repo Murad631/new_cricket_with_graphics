@@ -354,4 +354,153 @@ export class GraphicsService {
   async triggerPhaseTag(type: string) {
     return { type: 'update', graphic: type === 'powerplay' ? 'power_play' : (type === 'superover' ? 'super_over' : 'free_hit'), data: { active: true } };
   }
+
+  async getTopSixHitters() {
+    // 1. Get stats grouped by player
+    const stats = await this.deliveryRepo
+      .createQueryBuilder('d')
+      .select('d.strikerSquadId', 'squadId')
+      .addSelect('COUNT(d.id)', 'sixes')
+      .where('d.runsOffBat = :runs', { runs: 6 })
+      .andWhere('d.isVoided = :void', { void: false })
+      .groupBy('d.strikerSquadId')
+      .orderBy('sixes', 'DESC')
+      .limit(5)
+      .getRawMany();
+
+    // 2. Hydrate with player and team details
+    const leaderboard = await Promise.all(stats.map(async (row, index) => {
+      const squad = await this.matchSquadRepo.findOne({
+        where: { id: row.squadId }
+      });
+
+      // Manual fetch if relations aren't setup in the Entity (safer based on previous view)
+      let player: Player | null = null;
+      let team: Team | null = null;
+      
+      if (squad) {
+        player = await this.playerRepo.findOne({ where: { id: squad.playerId } });
+        team = await this.teamRepo.findOne({ where: { id: squad.teamId } });
+      }
+
+      return {
+        rank: index + 1,
+        name: player ? `${player.firstName} ${player.lastName}` : 'Unknown',
+        team: team ? team.shortName : 'UNK',
+        flag: team ? team.logo : '',
+        value: row.sixes,
+        highlight: index === 0
+      };
+    }));
+
+    return {
+      type: 'update',
+      graphic: 'leaderboard',
+      data: {
+        title: 'TOURNAMENT LEADERS',
+        subtitle: 'MOST SIXES',
+        list: leaderboard
+      }
+    };
+  }
+
+  async listAllMatches() {
+    return await this.matchRepo.find({
+      order: { id: 'DESC' },
+      select: ['id', 'title', 'venue', 'startTime']
+    });
+  }
+
+  async triggerMatchDetails(matchId: number) {
+    const match = await this.matchRepo.findOne({ where: { id: matchId } });
+    if (!match) return { status: 'error', message: 'Match not found' };
+
+    const team1 = await this.teamRepo.findOne({ where: { id: match.team1Id } });
+    const team2 = await this.teamRepo.findOne({ where: { id: match.team2Id } });
+
+    // Toss construction
+    let tossText = 'TOSS DETAILS NOT AVAILABLE';
+    if (match.tossWinnerTeamId) {
+      const winner = await this.teamRepo.findOne({ where: { id: match.tossWinnerTeamId } });
+      if (winner) {
+        tossText = `TOSS: ${winner.name} WON & ELECTED TO ${match.tossDecision || 'BAT'} FIRST`;
+      }
+    }
+
+    return {
+      type: 'update',
+      graphic: 'match_details',
+      data: {
+        title: 'MATCH INFORMATION',
+        tournament: 'ICC T20 WORLD CUP 2026',
+        venue: match.venue || 'TBD',
+        city: match.city || 'TBD',
+        matchNo: `Match ${match.id}`,
+        umpire1: match.umpire1 || 'TBD',
+        umpire2: match.umpire2 || 'TBD',
+        referee: match.referee || 'TBD',
+        toss: tossText
+      }
+    };
+  }
+
+  async listTeams() {
+    return await this.teamRepo.find({ order: { name: 'ASC' } });
+  }
+
+  async triggerPlayingXI(matchId: number, teamId: number) {
+    const team = await this.teamRepo.findOne({ where: { id: teamId } });
+    if (!team) return { status: 'error', message: 'Team not found' };
+
+    const squadRepo = this.matchSquadRepo;
+    const squadEntries = await squadRepo.find({
+      where: { matchId, teamId, isPlayingXI: true, isActive: true },
+      order: { battingPos: 'ASC' }
+    });
+
+    if (!squadEntries.length) return { status: 'error', message: 'No playing XI found' };
+
+    const playersFull = await Promise.all(squadEntries.map(async (sq) => {
+      const p = await this.playerRepo.findOne({ where: { id: sq.playerId } });
+      let playerRole = (p?.role || 'PLAYER').replace(/_/g, ' ').toUpperCase();
+      
+      let roleTag = playerRole;
+      if (sq.isCaptain) roleTag = `CAPTAIN • ${playerRole}`;
+      else if (sq.isViceCaptain) roleTag = `VICE CAPTAIN • ${playerRole}`;
+      
+      if (sq.isWicketKeeper) roleTag = `${roleTag} • WK`;
+
+      return {
+        name: p ? `${p.firstName} ${p.lastName}`.toUpperCase() : 'UNKNOWN',
+        role: roleTag,
+        img: p?.image || 'https://static.cricinfo.com/db/PICTURES/CMS/316600/316605.png',
+        isCaptain: sq.isCaptain,
+        pos: sq.battingPos || 0
+      };
+    }));
+
+    const captain = playersFull.find(p => p.isCaptain) || playersFull[0];
+    const others = playersFull.filter(p => p !== captain).slice(0, 10);
+
+    return {
+      type: 'update',
+      graphic: 'playing_xi',
+      data: {
+        teamName: `${team.name.toUpperCase()} SQUAD`,
+        teamLogo: team.logo,
+        captain: {
+          name: captain.name,
+          role: captain.role,
+          img: captain.img,
+          pos: captain.pos
+        },
+        players: others.map((p, i) => ({
+          name: p.name,
+          role: p.role,
+          img: p.img,
+          order: p.pos || (i + 2) // showing batting position or sequential
+        }))
+      }
+    };
+  }
 }

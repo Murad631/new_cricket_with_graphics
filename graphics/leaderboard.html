@@ -250,7 +250,6 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            padding-bottom: 60px; /* high safety margin for last row visibility */
         }
 
         .lb-row {
@@ -468,24 +467,22 @@
     </div>
 
     <script>
-        const leaderboardData = [
-            { rank: 1, name: "Suryakumar Yadav", team: "IND", value: "18", highlight: true, flag: "https://static.cricinfo.com/db/PICTURES/CMS/313100/313128.logo.png" },
-            { rank: 2, name: "Nicholas Pooran", team: "WI", value: "15", highlight: false, flag: "https://static.cricinfo.com/db/PICTURES/CMS/313100/313158.logo.png" },
-            { rank: 3, name: "Virat Kohli", team: "IND", value: "12", highlight: false, flag: "https://static.cricinfo.com/db/PICTURES/CMS/313100/313128.logo.png" },
-            { rank: 4, name: "Jos Buttler", team: "ENG", value: "11", highlight: false, flag: "https://static.cricinfo.com/db/PICTURES/CMS/313100/313136.logo.png" },
-            { rank: 5, name: "David Warner", team: "AUS", value: "10", highlight: false, flag: "https://static.cricinfo.com/db/PICTURES/CMS/313100/313125.logo.png" }
-        ];
-
-        function initLeaderboard() {
+        function renderLeaderboard(data) {
             const list = document.getElementById('lb-list');
             list.innerHTML = '';
-            leaderboardData.forEach(p => {
+            
+            if (data.title) document.getElementById('lb-title').innerText = data.title;
+            if (data.subtitle) document.getElementById('lb-subtitle').innerText = data.subtitle;
+
+            const players = data.list || data; 
+            
+            players.forEach(p => {
                 const row = document.createElement('div');
                 row.className = `lb-row ${p.highlight ? 'highlight' : ''}`;
                 row.innerHTML = `
                     <div class="lb-rank">${p.rank}</div>
                     <div class="lb-name">
-                        <img src="${p.flag}" class="lb-team-flag" alt="${p.team}">
+                        ${p.flag ? `<img src="${p.flag}" class="lb-team-flag" alt="${p.team}">` : '<div style="width:24px;height:16px;background:rgba(255,255,255,0.1)"></div>'}
                         <span>${p.name} <span class="lb-team-code">${p.team}</span></span>
                     </div>
                     <div class="lb-value">${p.value}</div>
@@ -504,21 +501,53 @@
                     '-=0.4'
                 );
         }
+
+        async function fetchLeaderboard() {
+            try {
+                const response = await fetch('/api/graphics/leaderboard/sixes');
+                if (!response.ok) throw new Error("API error");
+                const result = await response.json();
+                if (result.type === 'update' && result.graphic === 'leaderboard') {
+                    renderLeaderboard(result.data);
+                }
+            } catch (err) {
+                console.error("Fetch failed", err);
+            }
+        }
+
         function hide() {
             const tl = gsap.timeline();
             tl.to('.lb-row', { opacity: 0, x: -10, duration: 0.3, stagger: 0.03, ease: 'power2.in' })
               .to('#lb-master', { opacity: 0, scale: 0.95, y: 30, duration: 0.5, ease: 'power2.in' }, '-=0.2');
         }
 
+        window.onload = fetchLeaderboard;
 
-        window.onload = initLeaderboard;
-    
-    
-
-        // === LISTEN FOR CANVAS HIDE COMMAND ===
         window.addEventListener('message', (e) => {
-            if (e.data === 'HIDE') hide();
+            const msg = e.data;
+            if (msg === 'HIDE' || msg.type === 'HIDE') {
+                hide();
+            } else if (msg.type === 'SHOW' || msg.type === 'UPDATE') {
+                renderLeaderboard(msg.data);
+            } else if (msg.graphic === 'leaderboard') { // Fallback if data is raw payload
+                 renderLeaderboard(msg.data);
+            }
         });
+    </script>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+    <script>
+        if (typeof io !== 'undefined') {
+            const socket = io('http://localhost:3000');
+            socket.on('graphic_event', (p) => {
+                if (p.graphic === 'leaderboard') {
+                    if (p.type === 'show' || p.type === 'update') {
+                        renderLeaderboard(p.data);
+                    } else if (p.type === 'hide') {
+                        hide();
+                    }
+                }
+            });
+        }
     </script>
 </body>
 </html>

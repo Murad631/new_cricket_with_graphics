@@ -280,8 +280,37 @@ border: 1px solid var(--glass-border);
     </div>
 
     <script>
+        function renderDetails(data) {
+            const master = document.getElementById('md-master');
+            
+            // Map incoming data to the UI
+            // Assuming the structure from the API trigger
+            if (data.title) document.querySelector('.header-title').innerText = data.title;
+            if (data.tournament) document.querySelector('.header-tourney').innerText = data.tournament;
+            
+            // Map info rows
+            const rows = document.querySelectorAll('.info-row');
+            if (rows.length >= 6) {
+                // Section 1: Venue, City, Match No
+                rows[0].querySelector('.info-value').innerText = data.venue || 'TBD';
+                rows[1].querySelector('.info-value').innerText = data.city || 'TBD';
+                rows[2].querySelector('.info-value').innerText = data.matchNo || 'TBD';
+                
+                // Section 2: Umpires & Referee
+                rows[3].querySelector('.info-value').innerText = data.umpire1 || 'TBD';
+                rows[4].querySelector('.info-value').innerText = data.umpire2 || 'TBD';
+                rows[5].querySelector('.info-value').innerText = data.referee || 'TBD';
+            }
+            
+            if (data.toss) document.querySelector('.footer-toss').innerText = data.toss;
+
+            // Trigger animation
+            show();
+        }
+
         function show() {
             const tl = gsap.timeline();
+            gsap.set('#md-master', { visibility: 'visible' });
 
             tl.fromTo('#md-master', 
                 { opacity: 0, scale: 0.95, y: 50 }, 
@@ -305,14 +334,32 @@ border: 1px solid var(--glass-border);
                 .to('#md-master', { opacity: 0, scale: 0.95, y: 50, duration: 0.55, ease: 'power2.in' }, '-=0.2');
         }
 
-        window.onload = show;
-    
-    
-
-        // === LISTEN FOR CANVAS HIDE COMMAND ===
+        // === LISTEN FOR COMMANDS ===
         window.addEventListener('message', (e) => {
-            if (e.data === 'HIDE') hide();
+            const msg = e.data;
+            if (msg === 'HIDE' || msg.type === 'HIDE') {
+                hide();
+            } else if (msg.type === 'SHOW' || msg.type === 'UPDATE') {
+                renderDetails(msg.data);
+            } else if (msg.graphic === 'match_details') {
+                renderDetails(msg.data);
+            }
         });
+    </script>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+    <script>
+        if (typeof io !== 'undefined') {
+            const socket = io('http://localhost:3000');
+            socket.on('graphic_event', (p) => {
+                if (p.graphic === 'match_details') {
+                    if (p.type === 'show' || p.type === 'update') {
+                        renderDetails(p.data);
+                    } else if (p.type === 'hide') {
+                        hide();
+                    }
+                }
+            });
+        }
     </script>
 </body>
 </html>
