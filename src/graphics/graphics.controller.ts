@@ -241,4 +241,11 @@ export class GraphicsController {
     }
     return payload;
   }
+
+  @Get('scoreboard/trigger/:action')
+  async triggerScoreboard(@Param('action') action: 'show' | 'hide') {
+    const payload = await this.graphicsService.triggerScoreboard(action);
+    this.eventEmitter.emit('graphic_event', payload);
+    return payload;
+  }
 }

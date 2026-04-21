@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>Cricket Scoreboard - Crystal Broadcast</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700;900&family=Montserrat:wght@400;700;900&family=Roboto+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+
+    <style>
+        :root {
+            --primary-navy: #4d03a7;
+            --accent-pink: #ed008c;
+            --accent-cyan: #00bef1;
+            --accent-yellow: #fded00;
+            --text-white: #ffffff;
+            --glass-shine: rgba(255, 255, 255, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            background: transparent;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            /* Align to bottom */
+            align-items: center;
+            padding-bottom: 0px;
+            /* Absolute bottom */
+            margin: 0;
+        }
+
+        #scoreboard-container {
+            width: 100%;
+            max-width: 1750px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            visibility: hidden;
+            opacity: 0;
+        }
+
+        svg {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-width: 1800px;
+        }
+
+        /* Styles from original sytle.css */
+        .bg-red-gradient {
+            fill: url(#red-grad);
+        }
+
+        .bg-white {
+            fill: #ffffff;
+        }
+
+        .bg-dark {
+            fill: #220033;
+        }
+
+        #scoreboard text {
+            font-family: 'Montserrat', sans-serif;
+            text-transform: uppercase;
+        }
+
+        #batting_team_name {
+            fill: #ffffff;
+            font-size: 55px;
+            font-weight: 800;
+        }
+
+        #total_runs {
+            fill: #ffffff;
+            font-size: 70px;
+            font-weight: 900;
+        }
+
+        #total_run_hyphen {
+            fill: #ffffff;
+            font-size: 50px;
+            font-weight: 700;
+        }
+
+        #outs {
+            fill: #ffcc00;
+            font-size: 50px;
+            font-weight: 900;
+        }
+
+        #total_overs {
+            fill: #ffffff;
+            font-size: 35px;
+            font-weight: 700;
+        }
+
+        #total_over_heading {
+            fill: #ffffff;
+            font-size: 14px;
+            font-weight: 700;
+            opacity: 0.8;
+        }
+
+        #details {
+            fill: #ffffff;
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        #player1,
+        #player2 {
+            fill: #000000;
+            font-size: 35px;
+            font-weight: 800;
+        }
+
+        #player1_runs,
+        #player2_runs {
+            fill: #000000;
+            font-size: 40px;
+            font-weight: 900;
+        }
+
+        #player1_balls,
+        #player2_balls {
+            fill: #555555;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        #striker_arrow_path {
+            fill: #d6003b;
+        }
+
+        #bowler {
+            fill: #000000;
+            font-size: 35px;
+            font-weight: 800;
+        }
+
+        #commentary {
+            fill: #ffffff;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        #bowlling_team_name {
+            fill: #ffffff;
+            font-size: 55px;
+            font-weight: 800;
+        }
+
+        #average {
+            fill: #220033;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        #averag_calculate {
+            fill: #220033;
+            font-size: 24px;
+            font-weight: 900;
+        }
+
+        .disabled {
+            fill: gray;
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        #shine-sweep {
+            position: absolute;
+            top: 0;
+            left: -50%;
+            width: 40%;
+            height: 100%;
+            background: linear-gradient(to right,
+                    rgba(255, 255, 255, 0) 0%,
+                    rgba(255, 255, 255, 0.8) 50%,
+                    rgba(255, 255, 255, 0) 100%);
+            transform: skewX(-25deg);
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="scoreboard-container">
+        <div id="shine-sweep"></div>
+        <svg id="scoreboard" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2759 250">
+            <defs>
+                <linearGradient id="red-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#d6003b" />
+                    <stop offset="100%" stop-color="#7e005d" />
+                </linearGradient>
+
+                <linearGradient id="gloss-shine" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.4" />
+                    <stop offset="50%" stop-color="#ffffff" stop-opacity="0" />
+                </linearGradient>
+
+                <clipPath id="bat-flag-clip">
+                    <path d="M 20 0 L 160 0 L 160 100 L 20 100 A 20 20 0 0 1 0 80 L 0 20 A 20 20 0 0 1 20 0 Z" />
+                </clipPath>
+                <clipPath id="bowl-flag-clip">
+                    <path d="M 0 0 L 140 0 C 160 0 160 0 160 20 L 160 80 C 160 100 160 100 140 100 L 0 100 Z" />
+                </clipPath>
+            </defs>
+
+            <g transform="translate(480, 50)">
+                <!-- LEFT FLAG (BAT) -->
+                <g id="batting_team_portion">
+                    <path d="M 20 0 L 160 0 L 160 100 L 20 100 A 20 20 0 0 1 0 80 L 0 20 A 20 20 0 0 1 20 0 Z"
+                        fill="#ffffff" stroke="#ffcc00" stroke-width="2.5" />
+                    <image x="0" y="0" width="160" height="100" id="batting_team_image" preserveAspectRatio="none"
+                        clip-path="url(#bat-flag-clip)" />
+                    <path d="M 20 0 L 160 0 L 160 100 L 20 100 A 20 20 0 0 1 0 80 L 0 20 A 20 20 0 0 1 20 0 Z"
+                        fill="url(#gloss-shine)" clip-path="url(#bat-flag-clip)" />
+                    <rect x="0" y="70" width="160" height="30" fill="rgba(0,0,0,0.85)"
+                        clip-path="url(#bat-flag-clip)" />
+                    <text id="batting_team_name" x="80" y="93" text-anchor="middle"
+                        style="letter-spacing: 1px;">AUS</text>
+                </g>
+
+                <!-- PLAYERS PANEL -->
+                <g id="players_portion" transform="translate(160, 0)">
+                    <rect x="0" y="0" width="550" height="100" class="bg-white" />
+                    <g id="striker_arrow" transform="translate(10, 15)">
+                        <path id="striker_arrow_path" d="M 0,0 L 10,10 L 0,20 Z" />
+                    </g>
+                    <g transform="translate(30, 40)">
+                        <text id="player1" x="0" y="0">PLAYER 1</text>
+                        <text id="player1_runs" x="350" y="0" text-anchor="end">0</text>
+                        <text id="player1_balls" x="360" y="0" text-anchor="start">(0)</text>
+                    </g>
+                    <g transform="translate(30, 85)">
+                        <text id="player2" x="0" y="0">PLAYER 2</text>
+                        <text id="player2_runs" x="350" y="0" text-anchor="end">0</text>
+                        <text id="player2_balls" x="360" y="0" text-anchor="start">(0)</text>
+                    </g>
+                </g>
+
+                <!-- CENTER SCORE PANEL -->
+                <g id="score_portion" transform="translate(710, -5)">
+                    <rect x="0" y="0" width="500" height="110" class="bg-red-gradient" rx="4" stroke="#ffcc00"
+                        stroke-width="3" />
+                    <rect x="0" y="0" width="500" height="55" fill="url(#gloss-shine)" rx="4" />
+                    <text id="details" x="485" y="25" text-anchor="end">MATCH INFO</text>
+                    <g transform="translate(250, 85)">
+                        <text id="total_runs" x="-70" y="0" text-anchor="end">0</text>
+                        <text id="total_run_hyphen" x="-50" y="-5" text-anchor="middle">-</text>
+                        <text id="outs" x="-30" y="0" text-anchor="start">0</text>
+                        <text id="total_overs" x="90" y="0" text-anchor="start">0.0</text>
+                        <text id="total_over_heading" x="160" y="0" text-anchor="start">OVERS</text>
+                    </g>
+                    <!-- Bottom Status Bar -->
+                    <g id="commentary_portion" transform="translate(0, 110)">
+                        <path d="M -250 0 L 750 0 L 730 45 L -230 45 Z" class="bg-dark" stroke="#ffcc00"
+                            stroke-width="1.5" />
+                        <text id="commentary" x="250" y="32" text-anchor="middle">Match is Starting</text>
+                    </g>
+                </g>
+
+                <!-- BOWLER PANEL -->
+                <g id="bowler_portion" transform="translate(1210, 0)">
+                    <rect x="0" y="0" width="450" height="100" class="bg-white" />
+                    <text id="bowler" x="30" y="40">BOWLER NAME</text>
+                    <g transform="translate(250, 32)">
+                        <text id="average" x="120" y="0" text-anchor="end"></text>
+                        <text id="averag_calculate" x="130" y="0" text-anchor="start"></text>
+                    </g>
+                    <g id="overSummary" transform="translate(30, 70) scale(0.8)"></g>
+                </g>
+
+                <!-- RIGHT FLAG (BOWL) -->
+                <g id="bowling_team_portion" transform="translate(1660, 0)">
+                    <path d="M 0 0 L 140 0 C 160 0 160 0 160 20 L 160 80 C 160 100 160 100 140 100 L 0 100 Z"
+                        fill="#ffffff" stroke="#ffcc00" stroke-width="2.5" />
+                    <image x="0" y="0" width="160" height="100" id="bowling_team_image" preserveAspectRatio="none"
+                        clip-path="url(#bowl-flag-clip)" />
+                    <path d="M 0 0 L 140 0 C 160 0 160 0 160 20 L 160 80 C 160 100 160 100 140 100 L 0 100 Z"
+                        fill="url(#gloss-shine)" clip-path="url(#bowl-flag-clip)" />
+                    <rect x="0" y="70" width="160" height="30" fill="rgba(0,0,0,0.85)"
+                        clip-path="url(#bowl-flag-clip)" />
+                    <text id="bowlling_team_name" x="80" y="93" text-anchor="middle"
+                        style="letter-spacing: 1px;">PAK</text>
+                </g>
+            </g>
+        </svg>
+    </div>
+
+    <script>
+        const socket = io('http://localhost:3000');
+        const overGroup = document.getElementById('overSummary');
+        const arrowEl = document.getElementById('striker_arrow');
+
+        let currentStrikerRow = 1;
+        let crrTimeline = null;
+        let commentaryTimeline = null;
+
+        socket.on('setPlayers', (data) => {
+            updatePlayer("player1", data.striker.lastName, data.striker.runs, data.striker.balls);
+            updatePlayer("player2", data.nonStriker.lastName, data.nonStriker.runs, data.nonStriker.balls);
+
+            updateArrow();
+
+            document.getElementById('bowler').textContent = data.bowler.lastName;
+            let overData = Array.isArray(data.bowler.over_state) ? data.bowler.over_state : [];
+
+            document.getElementById("details").textContent = data.inning.batting_short_name + ' v ' + data.inning.bowling_short_name;
+            document.getElementById("bowlling_team_name").textContent = data.inning.bowling_short_name;
+            document.getElementById("batting_team_name").textContent = data.inning.batting_short_name;
+            document.getElementById("bowling_team_image").setAttribute("href", data.inning.bowling_logo);
+            document.getElementById("batting_team_image").setAttribute("href", data.inning.batting_logo);
+
+            drawOverSummary(overData);
+            ActivePlayer();
+        });
+
+        socket.on('swictPlayerUpDown', (data) => {
+            currentStrikerRow = (currentStrikerRow === 1) ? 2 : 1;
+            updateArrow();
+        });
+
+        socket.on('scoreboard', (data) => {
+            document.getElementById("total_runs").textContent = data.totalRun || '0';
+            document.getElementById("outs").textContent = data.totalWicket || '0';
+            document.getElementById("total_overs").textContent = data.overs || '0.0';
+
+            document.getElementById('player1_runs').textContent = data.player1_runs;
+            document.getElementById('player2_runs').textContent = data.player2_runs;
+            document.getElementById('player1_balls').textContent = `(${data.player1_ball})`;
+            document.getElementById('player2_balls').textContent = `(${data.player2_ball})`;
+
+            let overData = Array.isArray(data.ball_state) ? data.ball_state : [];
+            drawOverSummary(overData);
+
+            if (data.wicket && data.wicket.playerOutId) {
+                DisabledPlayer(data.wicket.outPlayer);
+            }
+        });
+
+        socket.on('show-crr', (data) => showStat('CRR', data.currentRunRate));
+        socket.on('show-rrr', (data) => showStat('RRR', data.requiredRunRate));
+
+        socket.on('dynamicText', (data) => updateCommentary(data, 7));
+        socket.on('show_message', (data) => updateCommentary(data, 0)); // 0 means stay
+
+        function updateArrow() {
+            if (!arrowEl) return;
+            const targetY = (currentStrikerRow === 1) ? 15 : 60;
+            gsap.to(arrowEl, { y: targetY, duration: 0.3, ease: "power2.inOut" });
+        }
+
+        function updatePlayer(id, name, runs, balls) {
+            document.getElementById(id).textContent = name;
+            document.getElementById(id + "_runs").textContent = runs;
+            document.getElementById(id + "_balls").textContent = `(${balls})`;
+        }
+
+        function drawOverSummary(overData) {
+            const maxAreaWidth = 440;
+            const boxSize = 40;
+            const gap = 5;
+            const totalWidth = overData.length * (boxSize + gap);
+
+            overGroup.innerHTML = '';
+            overGroup.setAttribute("transform", "translate(10, 58)");
+
+            if (totalWidth > maxAreaWidth) {
+                const scale = maxAreaWidth / totalWidth;
+                overGroup.setAttribute("transform", `translate(10, 58) scale(${scale})`);
+            }
+
+            overData.forEach((ball, index) => {
+                let color = '#3576ff';
+                const ballStr = String(ball);
+                if (ballStr === '4') color = '#0e9f11';
+                else if (ballStr === '6') color = '#d92738';
+                else if (ballStr === 'W') color = '#300000';
+                else if (['NB', 'WD', 'NB+', 'WD+'].some(t => ballStr.includes(t))) color = '#ff9800';
+                else if (['LB', 'B'].some(t => ballStr.includes(t))) color = '#000000';
+
+                const x = index * (boxSize + gap);
+
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', x);
+                rect.setAttribute('y', 0);
+                rect.setAttribute('width', boxSize);
+                rect.setAttribute('height', boxSize);
+                rect.setAttribute('rx', '4');
+                rect.setAttribute('fill', color);
+                rect.setAttribute('stroke', 'white');
+                rect.setAttribute('stroke-opacity', '0.4');
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', x + boxSize / 2);
+                text.setAttribute('y', boxSize / 2 + 7);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('fill', '#fff');
+                text.setAttribute('font-size', '25');
+                text.setAttribute('font-weight', 'bold');
+                text.textContent = ball;
+
+                overGroup.appendChild(rect);
+                overGroup.appendChild(text);
+            });
+        }
+
+        function showStat(labelText, value) {
+            const labelEl = document.getElementById('average');
+            const numberEl = document.getElementById('averag_calculate');
+            if (crrTimeline) crrTimeline.kill();
+            crrTimeline = gsap.timeline();
+            labelEl.textContent = labelText;
+            numberEl.textContent = value;
+            crrTimeline.to([labelEl, numberEl], { opacity: 1, duration: 0.5 })
+                .to({}, { duration: 5 })
+                .to([labelEl, numberEl], { opacity: 0, duration: 0.5 });
+        }
+
+        function updateCommentary(text, duration) {
+            const el = document.getElementById('commentary');
+            if (commentaryTimeline) commentaryTimeline.kill();
+            commentaryTimeline = gsap.timeline();
+            commentaryTimeline.to(el, { opacity: 0, duration: 0.3 })
+                .call(() => el.textContent = text.trim())
+                .to(el, { opacity: 1, duration: 0.6 });
+            if (duration > 0) {
+                commentaryTimeline.to({}, { duration: duration }).to(el, { opacity: 0, duration: 0.5 });
+            }
+        }
+
+        function DisabledPlayer(index) {
+            const prefix = (index === 1) ? "player1" : "player2";
+            document.getElementById(prefix).classList.add("disabled");
+            document.getElementById(prefix + "_runs").classList.add("disabled");
+            document.getElementById(prefix + "_balls").classList.add("disabled");
+        }
+
+        function ActivePlayer() {
+            ["player1", "player2"].forEach(p => {
+                document.getElementById(p).classList.remove("disabled");
+                document.getElementById(p + "_runs").classList.remove("disabled");
+                document.getElementById(p + "_balls").classList.remove("disabled");
+            });
+        }
+
+        // =============================================
+        // ANIMATION: Clean Professional Slide-Up
+        // Simple. Fast. No distortion. Broadcast-grade.
+        // =============================================
+        let currentTimeline = null;
+        let isVisible = false;
+        let isAnimating = false;
+
+        function show() {
+            console.log("Scoreboard Show Triggered");
+            if (isAnimating || isVisible) return;
+
+            isAnimating = true;
+            if (currentTimeline) currentTimeline.kill();
+
+            const container = document.getElementById('scoreboard-container');
+            const shine = document.getElementById('shine-sweep');
+            const parts = document.querySelectorAll('#batting_team_portion, #players_portion, #score_portion, #bowler_portion, #bowling_team_portion');
+
+            gsap.killTweensOf([container, shine, parts]);
+            gsap.set(container, { visibility: 'visible', opacity: 0, scaleY: 0, transformOrigin: "bottom" });
+            gsap.set(shine, { x: "-100%", opacity: 0 });
+            gsap.set(parts, { opacity: 0, y: 20 });
+
+            currentTimeline = gsap.timeline({
+                onComplete: () => { isVisible = true; isAnimating = false; }
+            });
+
+            currentTimeline
+                // Phase 1: Panel opens
+                .to(container, { opacity: 1, scaleY: 1, duration: 0.8, ease: "power4.out" }, 0)
+                // Phase 2: Shine Sweep across
+                .to(shine, { opacity: 1, x: "250%", duration: 0.9, ease: "power2.inOut" }, 0.1)
+                // Phase 3: Inner parts reveal
+                .to(parts, { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: "power2.out" }, "-=0.5")
+                // Fade out shine at end
+                .to(shine, { opacity: 0, duration: 0.2 }, "-=0.2");
+        }
+
+        function hide() {
+            console.log("Scoreboard Hide Triggered");
+            if (currentTimeline) currentTimeline.kill();
+
+            const container = document.getElementById('scoreboard-container');
+
+            currentTimeline = gsap.timeline({
+                onComplete: () => { isVisible = false; isAnimating = false; }
+            });
+
+            currentTimeline
+                // Phase 1: Collapse
+                .to(container, {
+                    opacity: 0, scaleY: 0, transformOrigin: "bottom",
+                    duration: 0.5, ease: "power4.in",
+                    onComplete: () => gsap.set(container, { visibility: 'hidden' })
+                });
+        }
+
+        // Listen ONLY for postMessage from Canvas
+        window.addEventListener('message', (e) => {
+            const msg = e.data;
+            console.log("Scoreboard Received Message:", msg);
+            if (msg === 'HIDE' || msg.type === 'HIDE' || msg.type === 'hide') {
+                hide();
+            } else if (msg.type === 'SHOW' || msg.type === 'show') {
+                show();
+            }
+            // UPDATE messages are ignored for animation (data updates happen via socket)
+        });
+    </script>
+</body>
+
+</html>

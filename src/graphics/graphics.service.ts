@@ -503,4 +503,12 @@ export class GraphicsService {
       }
     };
   }
+
+  async triggerScoreboard(type: 'show' | 'hide' = 'show') {
+    return {
+      type: type,
+      graphic: 'scoreboard',
+      data: {} // Scoreboard usually gets its data from separate live events
+    };
+  }
 }
