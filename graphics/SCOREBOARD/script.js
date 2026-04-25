@@ -26,7 +26,7 @@ socket.on('setPlayers', (data) => {
     document.getElementById("batting_team_image").setAttribute("href", data.inning.batting_logo);
 
     drowSVG(overData);
-     ActivePlayer()
+    ActivePlayer()
 });
 
 socket.on('swictPlayerUpDown', (data) => {
@@ -45,56 +45,56 @@ function updateArrow() {
 
 function DisabledPlayerBlink() {
 
-  let selectors =
-    currentStrikerRow === 1
-      ? ["#player1", "#player1_runs", "#player1_balls"]
-      : ["#player2", "#player2_runs", "#player2_balls"];
+    let selectors =
+        currentStrikerRow === 1
+            ? ["#player1", "#player1_runs", "#player1_balls"]
+            : ["#player2", "#player2_runs", "#player2_balls"];
 
-  let elements = selectors.map(s => document.querySelector(s)).filter(Boolean);
+    let elements = selectors.map(s => document.querySelector(s)).filter(Boolean);
 
-  if (elements.length === 0) {
-    console.log("No elements found!");
-    return;
-  }
+    if (elements.length === 0) {
+        console.log("No elements found!");
+        return;
+    }
 
-  gsap.to(elements, {
-    opacity: 0.2,
-    duration: 0.2,
-    repeat: 5,
-    yoyo: true,
-  });
+    gsap.to(elements, {
+        opacity: 0.2,
+        duration: 0.2,
+        repeat: 5,
+        yoyo: true,
+    });
 }
 
 
 
-function DisabledPlayer(index){
+function DisabledPlayer(index) {
 
     console.log(index);
-   if(index === 1){
-    document.getElementById("player1").classList.add("disabled");
-    document.getElementById("player1_runs").classList.add("disabled");
-    document.getElementById("player1_balls").classList.add("disabled");
-   } 
-   else{
-    document.getElementById("player2").classList.add("disabled");
-    document.getElementById("player2_runs").classList.add("disabled");
-    document.getElementById("player2_balls").classList.add("disabled");
+    if (index === 1) {
+        document.getElementById("player1").classList.add("disabled");
+        document.getElementById("player1_runs").classList.add("disabled");
+        document.getElementById("player1_balls").classList.add("disabled");
+    }
+    else {
+        document.getElementById("player2").classList.add("disabled");
+        document.getElementById("player2_runs").classList.add("disabled");
+        document.getElementById("player2_balls").classList.add("disabled");
 
-   }
+    }
 }
 
 
 
 
-function ActivePlayer(){
+function ActivePlayer() {
     document.getElementById("player1").classList.remove("disabled");
     document.getElementById("player1_runs").classList.remove("disabled");
     document.getElementById("player1_balls").classList.remove("disabled");
-   
+
     document.getElementById("player2").classList.remove("disabled");
     document.getElementById("player2_runs").classList.remove("disabled");
     document.getElementById("player2_balls").classList.remove("disabled");
-   
+
 }
 
 function updatePlayer(id, name, runs, balls) {
@@ -126,7 +126,7 @@ function drowSVG(object = []) {
     overData.forEach((ball, index) => {
         let color = '#3576ff';
         const ballStr = String(ball);
-         // ───────────── COLORS ─────────────
+        // ───────────── COLORS ─────────────
         if (ballStr === '4') {
             color = '#0e9f11ff';
         } else if (ballStr === '6') {
@@ -143,9 +143,9 @@ function drowSVG(object = []) {
             color = '#000000';
         } else if (ballStr.startsWith('B')) {
             color = '#000000';
-        } 
+        }
 
-       let fontSize = 30;
+        let fontSize = 30;
         if (ballStr === 'W') {
             fontSize = 24;
         } else if (ballStr === 'NB' || ballStr === 'WD') {
@@ -208,9 +208,9 @@ socket.on('scoreboard', (data) => {
     overData = Array.isArray(data.ball_state) ? data.ball_state : [];
     drowSVG(overData);
 
-    if(data.wicket.playerOutId){
+    if (data.wicket.playerOutId) {
         DisabledPlayer(data.wicket.outPlayer)
-       
+
     }
 });
 
@@ -237,7 +237,7 @@ socket.on('show-rrr', (data) => showStat('RRR', data.requiredRunRate));
 
 
 // 7-SECOND FADE FOR COMMENTARY
-socket.on('dynamicText', (data) => {    
+socket.on('dynamicText', (data) => {
     const el = document.getElementById('commentary');
 
     if (commentaryTimeline) commentaryTimeline.kill();
@@ -255,7 +255,7 @@ socket.on('dynamicText', (data) => {
 
 
 
-socket.on('show_message', (data) => {    
+socket.on('show_message', (data) => {
 
     const el = document.getElementById('commentary');
 

@@ -166,7 +166,8 @@
 
 
 .disabled {
-  fill: gray;
-  opacity: 0.4;
-  pointer-events: none; /* disable click */
+    fill: gray;
+    opacity: 0.4;
+    pointer-events: none;
+    /* disable click */
 }
