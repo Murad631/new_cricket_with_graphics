@@ -16,9 +16,12 @@ import { ScoringController } from './scoring.controller';
 import { OverSummary } from 'src/Entity/over_summary.entity';
 import { MatchBatting } from 'src/Entity/match_betting.entity';
 import { Team } from 'src/Entity/team.entity';
+import { Player } from 'src/Entity/player.entity';
+
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Delivery, Wicket,MatchSquad,Match ,ScoreboardState,Innings,OverSummary,MatchBatting, Team])], // Register the necessary entities
+  imports: [TypeOrmModule.forFeature([Delivery, Wicket, MatchSquad, Match, ScoreboardState, Innings, OverSummary, MatchBatting, Team, Player])], // Register the necessary entities
+
   providers: [ScoringService, ScoreboardService, DeliveryService, WicketService],
   controllers : [ScoringController],
   exports: [ScoringService], // Exporting for other modules to access

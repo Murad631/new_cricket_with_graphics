@@ -31,7 +31,7 @@ export class UserService {
     const user = this.userRepository.create({
       username: data.username,
       password: hashedPassword,
-      role_id: 2,
+      role_id: data.role_id || 2,
     });
 
     try {

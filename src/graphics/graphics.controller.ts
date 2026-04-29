@@ -9,6 +9,81 @@ import { GraphicsService } from './graphics.service';
 import { FowSeeder } from '../seeder/seed-fow';
 import { Sponsor } from '../Entity/sponsor.entity';
 import { PitchReport } from '../Entity/pitch_report.entity';
+import { IsNotEmpty, IsString, IsInt, IsOptional, IsNumber, Min, Max } from 'class-validator';
+
+export class CreateSponsorDto {
+  @IsNotEmpty()
+  @IsString()
+  name: string;
+
+  @IsOptional()
+  @IsString()
+  header?: string;
+
+  @IsOptional()
+  @IsString()
+  tagline?: string;
+
+  @IsOptional()
+  @IsNumber()
+  charges?: number;
+
+  @IsOptional()
+  @IsInt()
+  show_count?: number;
+
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @IsOptional()
+  @IsString()
+  image?: string;
+}
+
+export class CreatePitchReportDto {
+  @IsNotEmpty()
+  @IsInt()
+  matchId: number;
+
+  @IsOptional()
+  @IsInt()
+  inningsId?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(10)
+  grassCover?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(10)
+  turnProjection?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(10)
+  paceBounce?: number;
+
+  @IsOptional()
+  @IsString()
+  pitchType?: string;
+
+  @IsOptional()
+  @IsString()
+  boundaries?: string;
+
+  @IsOptional()
+  @IsString()
+  avgScore?: string;
+
+  @IsOptional()
+  @IsString()
+  matchType?: string;
+}
 
 @Controller('api/graphics')
 export class GraphicsController {
@@ -73,7 +148,7 @@ export class GraphicsController {
       }
     })
   }))
-  async createSponsor(@Body() data: Partial<Sponsor>, @UploadedFile() file: Express.Multer.File) {
+  async createSponsor(@Body() data: CreateSponsorDto, @UploadedFile() file: Express.Multer.File) {
     if (file) {
       data.image = `/uploads/sponsors/${file.filename}`;
     }
@@ -90,7 +165,7 @@ export class GraphicsController {
       }
     })
   }))
-  async updateSponsor(@Param('id') id: string, @Body() data: Partial<Sponsor>, @UploadedFile() file: Express.Multer.File) {
+  async updateSponsor(@Param('id') id: string, @Body() data: Partial<CreateSponsorDto>, @UploadedFile() file: Express.Multer.File) {
     if (file) {
       data.image = `/uploads/sponsors/${file.filename}`;
     }
@@ -116,7 +191,7 @@ export class GraphicsController {
   // ==========================================
 
   @Post('pitch-report')
-  async upsertPitchReport(@Body() data: Partial<PitchReport>) {
+  async upsertPitchReport(@Body() data: CreatePitchReportDto) {
     return await this.graphicsService.upsertPitchReport(data);
   }
 

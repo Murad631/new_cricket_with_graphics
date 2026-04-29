@@ -22,13 +22,10 @@ export class ScoreboardController {
     @Post('setPlayers')
     async setPlayers(@Body() body: any) {
   
-      const striker = body.strikerSquadId;
-      const nonStriker = body.nonStrikerSquadId;
-      const bowler = body.bowlerSquadId;
+      const striker = body.striker || body.strikerSquadId;
+      const nonStriker = body.nonStriker || body.nonStrikerSquadId;
+      const bowler = body.bowler || body.bowlerSquadId;
 
-      if (!striker || !nonStriker || !bowler) {
-        throw new BadRequestException('Players data must contain a striker, non-striker, and bowler');
-      }
       const result = await this.service.setPlayers({ striker, nonStriker, bowler });
 
        this.eventEmitter.emitAsync('scoreboard.players.update', result);

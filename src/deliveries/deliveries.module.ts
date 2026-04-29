@@ -12,10 +12,14 @@ import { MatchBatting } from 'src/Entity/match_betting.entity';
 import { Match } from 'src/Entity/match.entity';
 import { Innings } from 'src/Entity/inning.entity';
 import { Team } from 'src/Entity/team.entity';
+import { MatchSquad } from 'src/Entity/squad.entity';
+import { Player } from 'src/Entity/player.entity';
+
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Delivery,Wicket,OverSummary,MatchBatting,Match,Innings, Team]),ScoreboardModule],
+    TypeOrmModule.forFeature([Delivery, Wicket, OverSummary, MatchBatting, Match, Innings, Team, MatchSquad, Player]), ScoreboardModule],
+
   providers: [DeliveryService],
   controllers : [DeliveriesController ],
   exports: [DeliveryService],  // Export service for other modules to use

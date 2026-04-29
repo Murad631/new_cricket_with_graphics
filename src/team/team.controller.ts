@@ -8,15 +8,16 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { TeamService } from './team.service';
 import { JwtGuard } from 'src/auth/jwt.guard';
 import { teamLogoUploadOptions } from '../imports/team-upload.config';
+import { CreateTeamDto } from './create-team.dto';
 
 @UseGuards(JwtGuard)
 @Controller('teams')
 export class TeamController {
-  constructor(private readonly teamService: TeamService) {}
+  constructor(private readonly teamService: TeamService) { }
 
   @Post('store')
   @UseInterceptors(FileInterceptor('logo', teamLogoUploadOptions))
-  async create(@Body() data: any, @UploadedFile() logo?: Express.Multer.File) {
+  async create(@Body() data: CreateTeamDto, @UploadedFile() logo?: Express.Multer.File) {
     try {
       if (logo) data.logo = logo.path;
       return await this.teamService.create(data);
@@ -41,19 +42,19 @@ export class TeamController {
 
   @Get('team-players')
   async teamWithPlayersAll() {
-   const palyers = await this.teamService.teamWithPalyer();
-   return palyers;
+    const palyers = await this.teamService.teamWithPalyer();
+    return palyers;
   }
 
-    @Get('team-players/:id')
-    teamWithPlayersById(@Param('id', ParseIntPipe) id: number) {
-      return this.teamService.teamWithPalyer(id);
-    }
+  @Get('team-players/:id')
+  teamWithPlayersById(@Param('id', ParseIntPipe) id: number) {
+    return this.teamService.teamWithPalyer(id);
+  }
   @Put('update/:id')
   @UseInterceptors(FileInterceptor('logo', teamLogoUploadOptions))
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() data: any,
+    @Body() data: Partial<CreateTeamDto>,
     @UploadedFile() logo?: Express.Multer.File,
   ) {
     try {

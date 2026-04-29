@@ -1,4 +1,5 @@
-import { IsIn, IsOptional, IsString, Length } from 'class-validator';
+import { IsIn, IsOptional, IsString, Length, IsEnum } from 'class-validator';
+import { TeamStatus } from '../Entity/enums';
 
 export class CreateTeamDto {
   @IsString()
@@ -22,6 +23,6 @@ export class CreateTeamDto {
   secondaryColor: string;
 
   @IsOptional()
-  @IsIn(['active', 'inactive'])
-  status?: string; // default handled by entity
+  @IsEnum(TeamStatus)
+  status?: TeamStatus; // default handled by entity
 }
