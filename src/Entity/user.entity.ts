@@ -10,11 +10,14 @@ export class User {
   username: string;
 
   @Column()
-  password: string; // hashed
+  password: string;
 
   @Column()
-  role_id: number; // hashed
+  role_id: number;
+
+  @Column()
+  role_name: string; // ✅ ADD THIS
 
   @Column({ nullable: true })
-  currentJwtSecret: string; // stores the latest secret used for JWT
+  currentJwtSecret: string;
 }
