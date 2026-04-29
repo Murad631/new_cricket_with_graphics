@@ -14,12 +14,15 @@ async function bootstrap() {
   app.useStaticAssets(join(__dirname, '..', 'graphics'), {
     prefix: '/graphics/',
   });
-  
+
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,           
-      forbidNonWhitelisted: true, 
-      transform: true,           
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
     }),
   );
 

@@ -1,6 +1,6 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeepPartial, IsNull, Not, Repository } from 'typeorm';
+import { Repository, In, Not, IsNull } from 'typeorm';
 import { Delivery } from '../Entity/deliveries.entity';
 import { Wicket } from '../Entity/wicket.entity';
 import { ScoreboardService } from '../scoreboard/scoreboard.service';
@@ -10,558 +10,361 @@ import { MatchBatting } from 'src/Entity/match_betting.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Match } from '../Entity/match.entity';
 import { Innings } from '../Entity/inning.entity';
-import { stat } from 'fs';
-import { promises } from 'dns';
 import { Team } from 'src/Entity/team.entity';
+import { MatchSquad } from 'src/Entity/squad.entity';
+import { Player } from 'src/Entity/player.entity';
+
 @Injectable()
 export class DeliveryService {
-  playerGateway: any;
   constructor(
-    @InjectRepository(Delivery)
-    private readonly deliveryRepo: Repository<Delivery>,  // Injecting the Delivery repository
-
-    @InjectRepository(Wicket)
-    private readonly wicketRepo: Repository<Wicket>,  // Injecting the Wicket repository
-
-    @InjectRepository(OverSummary)
-    private readonly overSummary: Repository<OverSummary>,
-
-    @InjectRepository(MatchBatting)
-    private readonly batting: Repository<MatchBatting>,
-
-    @InjectRepository(Delivery)
-    private readonly delivery: Repository<Delivery>,
-
-    @InjectRepository(Match)
-    private readonly matchRepo: Repository<Match>,
-
-
-    @InjectRepository(Team)
-    private readonly teamRepo: Repository<Team>,
-
-
-    @InjectRepository(Innings)
-    private readonly inningsRepo: Repository<Innings>,
-
+    @InjectRepository(Delivery) private readonly deliveryRepo: Repository<Delivery>,
+    @InjectRepository(Wicket) private readonly wicketRepo: Repository<Wicket>,
+    @InjectRepository(OverSummary) private readonly overSummary: Repository<OverSummary>,
+    @InjectRepository(MatchBatting) private readonly batting: Repository<MatchBatting>,
+    @InjectRepository(Match) private readonly matchRepo: Repository<Match>,
+    @InjectRepository(Team) private readonly teamRepo: Repository<Team>,
+    @InjectRepository(Innings) private readonly inningsRepo: Repository<Innings>,
+    @InjectRepository(MatchSquad) private readonly matchSquadRepo: Repository<MatchSquad>,
+    @InjectRepository(Player) private readonly playerRepo: Repository<Player>,
     private readonly eventEmitter: EventEmitter2,
-
-
-    private readonly scoreboardService: ScoreboardService,  // ScoreboardService to update state
+    private readonly scoreboardService: ScoreboardService,
   ) { }
-
 
   async deliveryRecording(dto: any) {
     try {
-      if (!dto.matchId) throw new BadRequestException("Match ID is required");
-
-      const state = await this.scoreboardService.getOrCreate(dto.matchId);
-      if (!state) throw new BadRequestException("Scoreboard state not found for this match");
+      const state = await this.scoreboardService.getActiveState();
+      if (!state) throw new BadRequestException("Active scoreboard state not found");
 
       const matchId = state.matchId;
       const inningsId = state.currentInningsId;
-      const striker = state.strikerSquadId;
-      const nonStriker = state.nonStrikerSquadId;
-      const bowler = state.bowlerSquadId;
+      if (!matchId || !inningsId) throw new BadRequestException("No active match/inning found");
 
-      if (!inningsId) throw new BadRequestException("No active innings found for this match");
+      // Slot-based Identification (Fixed Slots)
+      const slot1MSId = state.strikerSquadId;
+      const slot2MSId = state.nonStrikerSquadId;
+      const bowlerMSId = state.bowlerSquadId;
+
+      const strikerIndex = state.striker_index ?? 1;
+      const striker = strikerIndex === 1 ? slot1MSId : slot2MSId;
+      const nonStriker = strikerIndex === 1 ? slot2MSId : slot1MSId;
+      const bowler = bowlerMSId;
+
       if (!striker || !nonStriker || !bowler) {
         throw new BadRequestException("Active players (striker, non-striker, and bowler) must be set");
       }
 
-      const battingSummary = await this.batting.findOne({
-        where: { player_id: striker, inningsId: inningsId, status: 1 },
-      });
-
-      if (!battingSummary) throw new BadRequestException("Active batting summary not found for striker");
-      let currentOver = await this.overSummary.findOne({
-        where: {
-          matchId,
-          inningsId,
-          player_id: bowler,
-          status: 1,
-        },
-      });
-
-      let overNumber = currentOver?.overNumber ? currentOver?.overNumber : 1;
-
-      if (!currentOver) {
-        const lastOver = await this.overSummary.findOne({
-          where: {
-            matchId,
-            inningsId,
-          },
-          order: { overNumber: "DESC" },
-        });
-        overNumber = (lastOver?.overNumber ?? 0) + 1;
+      // --- 1. Fetch or Create Batting Stats ---
+      let strikerBatting = await this.batting.findOne({ where: { inningsId, player_id: striker, status: 1 } });
+      if (!strikerBatting) {
+        strikerBatting = await this.batting.save(this.batting.create({
+          matchId, inningsId, player_id: striker, runs: 0, balls: 0, fours: 0, sixes: 0, index: 1, status: 1
+        }));
       }
 
-      if (!currentOver) {
-        currentOver = this.overSummary.create({
-          matchId,
-          inningsId,
-          player_id: bowler,
-          overNumber,
-          balls: [],
-          ball_index: 0,
-          runs: 0,
-          extra: 0,
-          wickets: 0,
-          status: 1,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-        await this.overSummary.save(currentOver);
+      let nonStrikerBatting = await this.batting.findOne({ where: { inningsId, player_id: nonStriker, status: 1 } });
+      if (!nonStrikerBatting) {
+        nonStrikerBatting = await this.batting.save(this.batting.create({
+          matchId, inningsId, player_id: nonStriker, runs: 0, balls: 0, fours: 0, sixes: 0, index: 2, status: 1
+        }));
       }
 
-      // Now we ALWAYS have a valid row
-      let OverBalls: any[] = currentOver.balls ?? [];
-      let ballIndex = currentOver.ball_index ?? 0;
-      let bowlerRuns = currentOver.runs ?? 0;
-      let bowlerExtra = currentOver.extra ?? 0;
-      let bowlerWickets = currentOver.wickets ?? 0;
+      // --- 2. Delivery Logic ---
+      // --- 2. Delivery Logic ---
+      const rawRun = Number(dto.run ?? 0);
+      const rawExtra = Number(dto.extraRun ?? dto.exrtaRun ?? 0);
+      const kind = this.getDeliveryKind(dto.extraType);
+      const isWicket = dto.iswicket === "W" || dto.iswicket === true;
+      const isLegalBall = kind !== DeliveryKind.WIDE && kind !== DeliveryKind.NOBALL;
 
-      // Safety check
-      if (ballIndex >= 6) {
-        return { message: `Over ${overNumber} is already complete.` };
-      }
+      let teamRunDelta = rawRun + rawExtra;
+      let batsmanRunDelta = rawRun;
+      let crossingRuns = rawRun; // Used for calculating strike rotation
 
-      // ────────────────────────────────────────────────
-      // 4. Process the delivery
-      // ────────────────────────────────────────────────
-      const run = Number(dto.run ?? 0);
-      let isLegalBall = true;
-      let kind: DeliveryKind = DeliveryKind.RUN;
-      let wicketInfo: any = null;
-      let battingUpdate: any = {};
+      if (kind === DeliveryKind.NOBALL || kind === DeliveryKind.WIDE) {
+        // Guarantee at least 1 penalty run for the team
+        if (teamRunDelta === 0) teamRunDelta = 1;
 
-      if (dto.extraType === "WD") kind = DeliveryKind.WIDE;
-      else if (dto.extraType === "NB") kind = DeliveryKind.NOBALL;
-      else if (dto.extraType === "B") kind = DeliveryKind.BYE;
-      else if (dto.extraType === "LB") kind = DeliveryKind.LEG_BYE;
-      else if (dto.iswicket === "W") kind = DeliveryKind.WICKET;
-
-      let teamRun = state.total_run ?? 0;
-      let teamExtra = state.total_extra ?? 0;
-      let totalWickets = state.total_wickets ?? 0;
-      let player1runs = 0;
-      let player1balls = 0;
-      let player2runs = 0;
-      let player2balls = 0;
-      // ─── Extras ─────────────────────────────────────
-      if (kind === DeliveryKind.WIDE) {
-        isLegalBall = false;
-        const wideRuns = (dto.exrtaRun ?? 0) + 1;
-        teamRun += wideRuns;
-        teamExtra += wideRuns;
-        bowlerRuns += wideRuns;
-        bowlerExtra += wideRuns;
-        const showValues = dto.exrtaRun == 0 ? 'WD' : `WD+${dto.exrtaRun}`
-        OverBalls.push(showValues);
-      } else if (kind === DeliveryKind.NOBALL) {
-        isLegalBall = false;
-        const nbRuns = (dto.exrtaRun ?? 0) + 1;
-        teamRun += nbRuns;
-        teamExtra += nbRuns;
-        bowlerRuns += nbRuns;
-        bowlerExtra += nbRuns;
-        const showValues = dto.exrtaRun == 0 ? 'NB' : `NB+${dto.exrtaRun}`
-        OverBalls.push(showValues);
+        if (kind === DeliveryKind.WIDE) {
+          batsmanRunDelta = 0; // Wides never give batsman runs
+          if (rawExtra === 0 && rawRun > 0) crossingRuns = rawRun - 1;
+        } else if (kind === DeliveryKind.NOBALL) {
+          if (rawExtra === 0 && rawRun > 0) {
+            batsmanRunDelta = rawRun - 1;
+            crossingRuns = rawRun - 1;
+          } else {
+            batsmanRunDelta = rawExtra > 0 ? rawRun : 0;
+            crossingRuns = rawRun;
+          }
+        }
       } else if (kind === DeliveryKind.BYE || kind === DeliveryKind.LEG_BYE) {
-        const extraRuns = dto.exrtaRun ?? 0;
-        teamRun += extraRuns;
-        teamExtra += extraRuns;
-        ballIndex += 1;
-        const newKind = kind == DeliveryKind.BYE ? "B" : "LB";
-        const showValues = dto.exrtaRun == 0 ? kind : `${newKind}+${extraRuns}`
-        OverBalls.push(showValues);
-        battingUpdate = { balls: (battingSummary.balls ?? 0) + 1 };
+        batsmanRunDelta = 0; // Byes/LegByes never give batsman runs
+        crossingRuns = rawRun;
       }
 
-      // ─── Wicket ─────────────────────────────────────
-      else if (kind === DeliveryKind.WICKET) {
-        totalWickets += 1;
-        ballIndex += 1;
+      let teamExtraDelta = 0;
+      if (kind === DeliveryKind.WIDE || kind === DeliveryKind.NOBALL) {
+        teamExtraDelta = teamRunDelta - batsmanRunDelta;
+      } else if (kind === DeliveryKind.BYE || kind === DeliveryKind.LEG_BYE) {
+        teamExtraDelta = teamRunDelta;
+      }
 
-        // ─── Determine which player is out ─────────────────
-        if (dto.wicketType === WicketType.RUN_OUT) {
-          wicketInfo = {
-            playerOutId: dto.out_player === 1 ? striker! : nonStriker!,
-            outPlayer: dto.out_player,
+      const bowlerRunDelta = (kind === DeliveryKind.BYE || kind === DeliveryKind.LEG_BYE) ? 0 : teamRunDelta;
+      const bowlerExtraDelta = (kind === DeliveryKind.WIDE || kind === DeliveryKind.NOBALL) ? teamRunDelta - batsmanRunDelta : 0;
+      const ballIndexDelta = isLegalBall ? 1 : 0;
+      let bowlerWicketDelta = 0;
+
+      const symbol = this.getBallSymbol(teamRunDelta, kind, isWicket);
+
+      // --- 3. Handle Wicket ---
+      let wicketInfo: any = null;
+      if (isWicket) {
+        const playerOutId = dto.wicketType === WicketType.RUN_OUT ? (dto.out_player === 2 ? nonStriker : striker) : striker;
+        const outPlayerBatting = playerOutId === striker ? strikerBatting : nonStrikerBatting;
+        
+        wicketInfo = {
+          playerOutId, outPlayer: playerOutId === slot1MSId ? 1 : 2, wicketType: dto.wicketType,
+          runs: (outPlayerBatting.runs ?? 0) + (playerOutId === striker ? batsmanRunDelta : 0),
+          balls: (outPlayerBatting.balls ?? 0) + (playerOutId === striker && isLegalBall ? 1 : 0),
+        };
+
+        await this.batting.update(wicketInfo.playerOutId, {
+          status: 0,
+          runs: (outPlayerBatting.runs ?? 0) + (playerOutId === striker ? batsmanRunDelta : 0),
+          balls: (outPlayerBatting.balls ?? 0) + (playerOutId === striker && isLegalBall ? 1 : 0),
+          fours: (outPlayerBatting.fours ?? 0) + (playerOutId === striker && batsmanRunDelta === 4 ? 1 : 0),
+          sixes: (outPlayerBatting.sixes ?? 0) + (playerOutId === striker && batsmanRunDelta === 6 ? 1 : 0)
+        });
+
+        // Emit wicket_dismissal graphic
+        const outSquad = await this.matchSquadRepo.findOne({ where: { id: wicketInfo.playerOutId } });
+        const outPlayerInfo = outSquad ? await this.playerRepo.findOne({ where: { id: outSquad.playerId } }) : null;
+        const bowlerSquad = await this.matchSquadRepo.findOne({ where: { id: bowler } });
+        const bowlerPlayerInfo = bowlerSquad ? await this.playerRepo.findOne({ where: { id: bowlerSquad.playerId } }) : null;
+
+        this.eventEmitter.emit('graphic_event', {
+          type: 'show', graphic: 'wicket_dismissal',
+          data: {
+            firstName: outPlayerInfo?.firstName?.toUpperCase(),
+            lastName: outPlayerInfo?.lastName?.toUpperCase(),
+            runs: wicketInfo.runs, balls: wicketInfo.balls,
+            fours: (outPlayerBatting.fours ?? 0) + (playerOutId === striker && batsmanRunDelta === 4 ? 1 : 0),
+            sixes: (outPlayerBatting.sixes ?? 0) + (playerOutId === striker && batsmanRunDelta === 6 ? 1 : 0),
+            strikeRate: wicketInfo.balls > 0 ? ((wicketInfo.runs / wicketInfo.balls) * 100).toFixed(1) : "0.0",
             wicketType: dto.wicketType,
-            runs: 0,
-            balls: 0,
-          };
+            bowlerName: bowlerPlayerInfo?.lastName?.toUpperCase(),
+            dotBalls: 0
+          }
+        });
+      }
 
-          const outBatting = await this.batting.findOne({
-            where: { player_id: wicketInfo.playerOutId, inningsId, status: 1 },
-          });
+      // --- 4. Update Striker (if not out) ---
+      if (!isWicket || wicketInfo.playerOutId !== striker) {
+        await this.batting.update(strikerBatting.id, {
+          runs: (strikerBatting.runs ?? 0) + batsmanRunDelta,
+          balls: (strikerBatting.balls ?? 0) + (isLegalBall ? 1 : 0),
+          fours: (strikerBatting.fours ?? 0) + (batsmanRunDelta === 4 ? 1 : 0),
+          sixes: (strikerBatting.sixes ?? 0) + (batsmanRunDelta === 6 ? 1 : 0),
+        });
+      }
 
-          if (outBatting) {
-            wicketInfo.runs = (outBatting.runs ?? 0) + run;
-            wicketInfo.balls = (outBatting.balls ?? 0) + 1;
-            await this.batting.update(
-              { id: outBatting.id },
-              {
-                runs: wicketInfo.runs,
-                balls: wicketInfo.balls,
-                status: 0,
-              }
-            );
+      // --- 5. Update Over Summary ---
+      const lastOver = await this.overSummary.findOne({ 
+        where: { matchId, inningsId }, 
+        order: { overNumber: 'DESC' } 
+      });
+
+      let currentOver: any = null;
+
+      // If the absolutely last over of the innings is active...
+      if (lastOver && lastOver.status === 1) {
+        if (lastOver.player_id === bowler) {
+          // It belongs to the current bowler, so we continue it
+          currentOver = lastOver;
+          // Safety: If it already has 6+ legal balls but status was stuck at 1, force close it
+          if ((currentOver.ball_index ?? 0) >= 6) {
+            await this.overSummary.update(currentOver.id, { status: 0 });
+            currentOver = null;
           }
         } else {
-          // Normal wicket
-          wicketInfo = {
-            playerOutId: striker!,
-            outPlayer: 1, // striker
-            wicketType: dto.wicketType,
-            runs: (battingSummary.runs ?? 0) + run,
-            balls: (battingSummary.balls ?? 0) + 1,
-          };
-          bowlerWickets += 1;
-
-          await this.batting.update(
-            { id: battingSummary.id },
-            {
-              runs: wicketInfo.runs,
-              balls: wicketInfo.balls,
-              status: 0,
-            }
-          );
-        }
-
-        if (wicketInfo.outPlayer === 1) {
-          player1runs = wicketInfo.runs;
-          player1balls = wicketInfo.balls;
-        } else {
-          player2runs = wicketInfo.runs;
-          player2balls = wicketInfo.balls;
-        }
-
-        OverBalls.push(dto.wicketType === WicketType.RUN_OUT ? "RO" : "W");
-      }
-
-
-      // ─── Normal runs ────────────────────────────────
-      else {
-        teamRun += run;
-        bowlerRuns += run;
-        ballIndex += 1;
-        OverBalls.push(run);
-
-        battingUpdate = {
-          runs: (battingSummary.runs ?? 0) + run,
-          balls: (battingSummary.balls ?? 0) + 1,
-        };
-      }
-
-      // ────────────────────────────────────────────────
-      // 5. Update on-strike batsman stats (if legal ball)
-      // ────────────────────────────────────────────────
-      if (isLegalBall) {
-        const onStrikePlayer = await this.batting.findOne({
-          where: { player_id: striker, status: 1 },
-        });
-
-        if (onStrikePlayer) {
-          await this.batting.update(
-            { id: onStrikePlayer.id },
-            {
-              runs: (onStrikePlayer.runs ?? 0) + run,
-              balls: (onStrikePlayer.balls ?? 0) + 1,
-            }
-          );
+          // It belongs to a DIFFERENT bowler (e.g. bowling change mid-over, or old active over stuck)
+          // Force close it so we can start a fresh over for the new bowler
+          await this.overSummary.update(lastOver.id, { status: 0 });
         }
       }
 
-      // ────────────────────────────────────────────────
-      // 6. Build response scoreboard
-      // ────────────────────────────────────────────────
-      const overWithIndex = `${overNumber - 1}.${ballIndex}`;
-      const [over, ball] = overWithIndex.split('.').map(Number);
-      const normalizedOver =
-        ball >= 6 ? over + 1 : over + ball / 10;
+      if (!currentOver) {
+        // Safety cleanup: close ALL active overs for this innings just to be sure there's no DB junk
+        await this.overSummary.update({ matchId, inningsId, status: 1 }, { status: 0 });
 
-      const battingPlayers = await this.batting.find({ where: { status: 1 } });
-
-      for (const fs of battingPlayers) {
-        if (fs.index === 1) {
-          // striker
-          player1runs = fs.runs;
-          player1balls = fs.balls;
-        }
-        else if (fs.index === 2) {
-          // non-striker
-          player2runs = fs.runs;
-          player2balls = fs.balls;
-        }
+        currentOver = await this.overSummary.save(this.overSummary.create({
+          matchId, 
+          inningsId, 
+          player_id: bowler, 
+          overNumber: (lastOver?.overNumber ?? 0) + 1, 
+          balls: [], 
+          ball_index: 0, 
+          runs: 0, 
+          extra: 0, 
+          wickets: 0, 
+          status: 1
+        }));
       }
-      const scoreboard = {
-        totalRun: teamRun,
-        totalWicket: totalWickets,
-        totalExtra: teamExtra,
-        overs: normalizedOver,
-        bowlerRuns,
-        bowlerBalls: ballIndex,
-        ball_state: OverBalls,
-        player1_ball: player1balls,
-        player1_runs: player1runs,
-        player2_ball: player2balls,
-        player2_runs: player2runs,
-        wicket: wicketInfo,
-        averageRunRate: 0,
-        currentRunRate: 0,
-        requiredRunRate: 0,
+
+      const updatedBallIndex = (currentOver.ball_index ?? 0) + ballIndexDelta;
+      await this.overSummary.update(currentOver.id, {
+        balls: [...(currentOver.balls ?? []), symbol], ball_index: updatedBallIndex,
+        runs: (currentOver.runs ?? 0) + bowlerRunDelta, extra: (currentOver.extra ?? 0) + bowlerExtraDelta,
+        wickets: (currentOver.wickets ?? 0) + bowlerWicketDelta, status: updatedBallIndex >= 6 ? 0 : 1,
+      });
+
+      // --- 6. Final State & Rotation ---
+      const finalTeamRun = (state.total_run ?? 0) + teamRunDelta;
+      const finalTeamWickets = (state.total_wickets ?? 0) + (isWicket ? 1 : 0);
+      let nextStrikerIndex = strikerIndex;
+      
+      // Strike rotates when batsmen physically cross
+      if (crossingRuns % 2 === 1) nextStrikerIndex = strikerIndex === 1 ? 2 : 1;
+      
+      const isOverEnd = updatedBallIndex >= 6;
+      if (isOverEnd) nextStrikerIndex = nextStrikerIndex === 1 ? 2 : 1;
+
+      await this.scoreboardService.update(1, {
+        total_run: finalTeamRun, total_wickets: finalTeamWickets, total_extra: (state.total_extra ?? 0) + teamExtraDelta,
+        currentOverNumber: isOverEnd ? currentOver.overNumber : currentOver.overNumber - 1,
+        striker_index: nextStrikerIndex
+      });
+
+      // Clear bowler on over end using QueryBuilder (null assignment)
+      if (isOverEnd) {
+        await this.scoreboardService.clearBowler();
+      }
+
+      // --- 7. Graphics (fetch FRESH data after all updates) ---
+      // Use status:1 to get only active batting records, order by id DESC to get latest
+      const b1 = await this.batting.findOne({ where: { inningsId, player_id: slot1MSId, status: 1 }, order: { id: 'DESC' } });
+      const b2 = await this.batting.findOne({ where: { inningsId, player_id: slot2MSId, status: 1 }, order: { id: 'DESC' } });
+      const getP = async (msId) => {
+        const ms = await this.matchSquadRepo.findOne({ where: { id: msId } });
+        return ms ? await this.playerRepo.findOne({ where: { id: ms.playerId } }) : null;
+      };
+      const p1 = await getP(slot1MSId), p2 = await getP(slot2MSId), pb = await getP(bowler);
+
+      const graphicData = {
+        playersData: {
+          striker: { id: slot1MSId, firstName: p1?.firstName, lastName: p1?.lastName, runs: b1?.runs ?? 0, balls: b1?.balls ?? 0, isStriker: nextStrikerIndex === 1 },
+          nonStriker: { id: slot2MSId, firstName: p2?.firstName, lastName: p2?.lastName, runs: b2?.runs ?? 0, balls: b2?.balls ?? 0, isStriker: nextStrikerIndex === 2 },
+          bowler: { id: bowler, firstName: pb?.firstName, lastName: pb?.lastName, total_balls: updatedBallIndex, over_state: [...(currentOver.balls ?? []), symbol] },
+          striker_side: nextStrikerIndex
+        },
+        scoreboardData: {
+          totalRun: finalTeamRun, totalWicket: finalTeamWickets,
+          overs: isOverEnd ? currentOver.overNumber : (currentOver.overNumber - 1) + (updatedBallIndex / 10),
+          player1_runs: b1?.runs ?? 0, player2_runs: b2?.runs ?? 0, onStrike: nextStrikerIndex,
+          ball_state: [...(currentOver.balls ?? []), symbol], wicket: wicketInfo
+        }
       };
 
-      this.eventEmitter.emitAsync('scoreboard.updated', scoreboard);
-
-      // i need to use here  this.playerGateway.updateScoreBoard(scoreboard); 
-      // i need first i will emit the call the socket the all the data save and update beacuse i need to update realtime and fast 
-      // ────────────────────────────────────────────────
-      // 7. Save delivery record
-      // ────────────────────────────────────────────────
-      const lastDelivery = await this.delivery.findOne({
-        where: { inningsId },
-        order: { seq: "DESC" },
-      });
-      const seq = (lastDelivery?.seq ?? 0) + 1;
-
-      const savedDelivery = await this.deliveryRepo.save({
-        inningsId,
-        seq,
-        overNumber,
-        ballIndex,
-        kind,
-        isLegal: isLegalBall,
-        strikerSquadId: striker,
-        nonStrikerSquadId: nonStriker,
-        bowlerSquadId: bowler,
-        runsOffBat: kind === DeliveryKind.RUN ? run : (kind === DeliveryKind.NOBALL ? run : 0),
-        wideRuns: kind === DeliveryKind.WIDE ? (dto.exrtaRun ?? 0) + 1 : 0,
-        noBallRuns: kind === DeliveryKind.NOBALL ? (dto.exrtaRun ?? 0) + 1 : 0,
-        byeRuns: kind === DeliveryKind.BYE ? (dto.exrtaRun ?? 0) : 0,
-        legByeRuns: kind === DeliveryKind.LEG_BYE ? (dto.exrtaRun ?? 0) : 0,
-        penaltyRuns: 0,
-        total_runs: teamRun - (state.total_run ?? 0),
-        symbol: "",
-        wicketId: wicketInfo?.playerOutId ?? undefined,
-        isVoided: false,
-      });
-
-      // ────────────────────────────────────────────────
-      // 8. Save wicket if applicable
-      // ────────────────────────────────────────────────
-      if (kind === DeliveryKind.WICKET && wicketInfo) {
-        await this.wicketRepo.save({
-          inningsId,
-          type: dto.wicketType,
-          outBatsmanSquadId: wicketInfo.playerOutId,
-          creditedBowlerSquadId: bowler,
-          fielder1SquadId: dto.fielder1SquadId ?? null,
-          isBowlerWicket: dto.wicketType !== WicketType.RUN_OUT,
-          outEnd: wicketInfo.outPlayer === 1 ? OutEnd.STRIKER : OutEnd.NON_STRIKER,
-          causedByDeliverySeq: savedDelivery.id, // Linking to actual Delivery ID
-        });
-      }
-
-      // ────────────────────────────────────────────────
-      // 9. Update over summary (ALWAYS update — never insert again)
-      // ────────────────────────────────────────────────
-      await this.overSummary.update(
-        { id: currentOver.id },
-        {
-          balls: OverBalls,
-          ball_index: ballIndex,
-          runs: bowlerRuns,
-          extra: bowlerExtra,
-          wickets: bowlerWickets,
-          status: ballIndex >= 6 ? 0 : 1,
-          updatedAt: new Date(),
-        }
-      );
-
-      // ────────────────────────────────────────────────
-      // 10. Update global scoreboard
-      // ────────────────────────────────────────────────
-      await this.scoreboardService.update(1, {
-        total_run: teamRun,
-        total_extra: teamExtra,
-        total_wickets: totalWickets,
-        currentOverNumber: overNumber,
-      });
-
-      this.getReaminingOverAndRuns(matchId, teamRun, overNumber, ballIndex, dto.message);
-
-      return scoreboard;
+      this.eventEmitter.emit('graphic_event', { type: 'show', graphic: 'scoreboard', data: graphicData });
+      this.eventEmitter.emitAsync('scoreboard.updated', graphicData.scoreboardData);
+      
+      this.getReaminingOverAndRuns(matchId, finalTeamRun, currentOver.overNumber, updatedBallIndex, dto.message);
+      return graphicData.scoreboardData;
     } catch (e) {
-      console.error("deliveryRecording error:", e);
-      if (e instanceof BadRequestException) throw e;
-      throw new BadRequestException(e.message || "Internal server error during delivery");
+      console.error("deliveryRecording Error:", e);
+      throw new BadRequestException(e.message);
     }
   }
 
+  private getDeliveryKind(extraType: string): DeliveryKind {
+    if (extraType === 'WD') return DeliveryKind.WIDE;
+    if (extraType === 'NB') return DeliveryKind.NOBALL;
+    if (extraType === 'B') return DeliveryKind.BYE;
+    if (extraType === 'LB') return DeliveryKind.LEG_BYE;
+    return DeliveryKind.RUN;
+  }
+
+  private getBallSymbol(run: number, kind: DeliveryKind, isWicket: boolean): string {
+    if (isWicket) return 'W';
+    if (kind === DeliveryKind.WIDE) return 'WD';
+    if (kind === DeliveryKind.NOBALL) return 'NB';
+    if (kind === DeliveryKind.BYE) return 'B';
+    if (kind === DeliveryKind.LEG_BYE) return 'LB';
+    return run.toString();
+  }
+
+  async cleanAll() {
+    await this.deliveryRepo.query('SET FOREIGN_KEY_CHECKS = 0');
+    await this.deliveryRepo.query('TRUNCATE TABLE deliveries');
+    await this.deliveryRepo.query('TRUNCATE TABLE innings');
+    await this.deliveryRepo.query('TRUNCATE TABLE match_batting');
+    await this.deliveryRepo.query('TRUNCATE TABLE over_summary');
+    await this.deliveryRepo.query('TRUNCATE TABLE wickets');
+    await this.deliveryRepo.query('TRUNCATE TABLE scoreboard_state');
+    await this.deliveryRepo.query('SET FOREIGN_KEY_CHECKS = 1');
+    return { message: "All match tables truncated successfully" };
+  }
+
+  async getTimeline(matchId: number) {
+    const innings = await this.inningsRepo.find({ where: { matchId } });
+    const innIds = innings.map(i => i.id);
+    if (innIds.length === 0) return [];
+    return this.deliveryRepo.find({ where: { inningsId: In(innIds) }, order: { seq: 'ASC' } });
+  }
 
   async getReaminingOverAndRuns(matchID: number, totalRuns: number, overs: number, index: number, showMessage: number) {
+    try {
+      const inningStates = await this.inningsRepo.find({ where: { matchId: matchID } });
+      const matchDetails = await this.matchRepo.findOne({ where: { id: matchID } });
+      if (!matchDetails) return;
 
-    console.log(totalRuns)
-    const inningStates = await this.inningsRepo.find({
-      where: { matchId: matchID },
-    });
-
-    const matchDetails = await this.matchRepo.findOne({
-      where: { id: matchID },
-    });
-
-    if (!matchDetails) {
-      throw new Error("Match not found");
-    }
-    const inningMessage = await Promise.all(
-      inningStates.map(async (i: any) => {
-        let total_Target_score = 0;
-        let message = "";
-        let remainBalls = 0;
+      for (const i of inningStates) {
         if (i.number === "FIRST" && i.endedAt != null) {
-          total_Target_score = i.targetRuns - totalRuns;
-          const totalBalls = matchDetails.oversLimit ? matchDetails.oversLimit * 6 : 0;
-          const attemptBalls = ((overs - 1) * 6) + index;
-          remainBalls = totalBalls - attemptBalls;
-          const team = await this.teamRepo.findOne({ where: { id: i.bowlingTeamId } })
-          message = `${team?.name} Required ${total_Target_score} runs in ${remainBalls} balls`;
-          if (showMessage === 1) {
-            this.eventEmitter.emitAsync('match_state_message', message);
-          }
+          const target = i.targetRuns || 0;
+          const diff = target - totalRuns;
+          const totalBalls = (matchDetails.oversLimit || 20) * 6;
+          const attemptBalls = (overs * 6) + index;
+          const remain = totalBalls - attemptBalls;
+          const team = await this.teamRepo.findOne({ where: { id: i.bowlingTeamId } });
+          const message = `${team?.name} Required ${diff} runs in ${remain} balls`;
+          if (showMessage === 1) this.eventEmitter.emitAsync('match_state_message', message);
         }
-        return message;
-      })
-    );
-
+      }
+    } catch (e) {}
   }
-
-
-  private buildSymbol(kind: DeliveryKind, dto: any): string {
-    switch (kind) {
-      case DeliveryKind.RUN:
-        return String(dto.runsOffBat ?? 0);
-      case DeliveryKind.WIDE:
-        return 'WD';
-      case DeliveryKind.NOBALL:
-        return dto.runsOffBat ? `NB+${dto.runsOffBat}` : 'NB';
-      case DeliveryKind.BYE:
-        return `B${dto.extraRuns ?? 0}`;
-      case DeliveryKind.LEG_BYE:
-        return `LB${dto.extraRuns ?? 0}`;
-      case DeliveryKind.PENALTY:
-        return `P${dto.extraRuns ?? 0}`;
-      default:
-        return '';
-    }
-  }
-
 
   async getRunRates(matchId: number) {
     const state = await this.scoreboardService.getOrCreate(matchId);
-    if (!state) throw new BadRequestException("Scoreboard state not found");
-
-    if (!state.currentInningsId) {
-      return {
-        averageRunRate: 0,
-        currentRunRate: 0,
-        requiredRunRate: 0
-      };
-    }
+    if (!state || !state.currentInningsId) return { averageRunRate: 0, currentRunRate: 0, requiredRunRate: 0 };
 
     const match = await this.matchRepo.findOne({ where: { id: matchId } });
-    const totalOvers = match?.oversLimit || 20;
-    const totalBallsAllocated = totalOvers * 6;
+    const totalBallsAllocated = (match?.oversLimit || 20) * 6;
 
-    const legalBallsCount = await this.delivery.count({
-      where: {
-        inningsId: state.currentInningsId,
-        isLegal: true
-      }
-    });
-
-
+    const legalBallsCount = await this.deliveryRepo.count({ where: { inningsId: state.currentInningsId, isLegal: true } });
     const teamRuns = state.total_run ?? 0;
-    let crr = 0;
-    if (legalBallsCount > 0) {
-      const oversDecimal = legalBallsCount / 6;
-      crr = teamRuns / oversDecimal;
-    }
 
+    let crr = legalBallsCount > 0 ? teamRuns / (legalBallsCount / 6) : 0;
 
-    let rrr = 0;
-
-
-    const inningState = await this.inningsRepo.findOne({
-      where: {
-        matchId: matchId,
-        targetRuns: Not(IsNull()),
-        endedAt: Not(IsNull())
-      }
-    });
-
+    const inningState = await this.inningsRepo.findOne({ where: { matchId: matchId, targetRuns: Not(IsNull()), endedAt: Not(IsNull()) } });
     const targetRuns = inningState?.targetRuns ?? 0;
     const runsRemaining = targetRuns - teamRuns;
     const ballsRemaining = totalBallsAllocated - legalBallsCount;
 
-    if (runsRemaining > 0 && ballsRemaining > 0) {
-      rrr = (runsRemaining * 6) / ballsRemaining; // per over
-    } else {
-      rrr = 0;
-    }
+    let rrr = (runsRemaining > 0 && ballsRemaining > 0) ? (runsRemaining * 6) / ballsRemaining : 0;
 
-
-    return {
-      averageRunRate: parseFloat(crr.toFixed(2)),
-      currentRunRate: parseFloat(crr.toFixed(2)),
-      requiredRunRate: parseFloat(rrr.toFixed(2))
-    };
+    return { averageRunRate: parseFloat(crr.toFixed(2)), currentRunRate: parseFloat(crr.toFixed(2)), requiredRunRate: parseFloat(rrr.toFixed(2)) };
   }
 
   async inningEnd(matchId: number) {
-    if (!matchId) throw new BadRequestException("Match ID is required to end innings");
     const state = await this.scoreboardService.getOrCreate(matchId);
-    if (!state) throw new BadRequestException("Scoreboard state not found");
+    if (!state || !state.currentInningsId) throw new BadRequestException("No active innings");
 
     const inningsId = state.currentInningsId;
-    if (!inningsId) throw new BadRequestException("No active innings to end");
+    const total_over = await this.overSummary.findOne({ where: { matchId, inningsId }, order: { overNumber: 'DESC' } });
+    const totalBalls = ((total_over?.overNumber ?? 0) * 6) + (total_over?.ball_index ?? 0);
 
-    const total_over = await this.overSummary.findOne({
-      where: { matchId: state.matchId, inningsId },
-      order: { overNumber: 'DESC' }
-    });
-
-    const completedOvers = total_over?.overNumber ?? 0;
-    const ballsInOver = total_over?.ball_index ?? 0;
-    const totalBalls = (completedOvers * 6) + ballsInOver;
-    const oversDecimal = totalBalls / 6;
-
-    await this.inningsRepo.update(
-      { id: inningsId },
-      {
-        targetRuns: state.total_run,
-        total_extra: state.total_extra,
-        total_attempt_over: oversDecimal,
-        isActive: false,
-        endedAt: new Date()
-      }
-    );
-
-    // reset state for this match
-    await this.scoreboardService.update(state.id, {
-      currentInningsId: null,
-      strikerSquadId: null,
-      nonStrikerSquadId: null,
-      bowlerSquadId: null,
-      currentOverNumber: 0,
-      total_run: 0,
-      total_extra: 0,
-      total_wickets: 0
-    });
+    await this.inningsRepo.update({ id: inningsId }, { targetRuns: state.total_run, total_attempt_over: totalBalls / 6, isActive: false, endedAt: new Date() });
+    await this.scoreboardService.update(state.id, { currentInningsId: null, strikerSquadId: null, nonStrikerSquadId: null, bowlerSquadId: null, currentOverNumber: 0, total_run: 0, total_extra: 0, total_wickets: 0 });
 
     return { message: "Inning End Successfully", status: true };
   }
-
-
 }

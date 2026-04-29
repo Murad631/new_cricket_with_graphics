@@ -3,19 +3,67 @@ import {
   UseGuards, UploadedFile, UseInterceptors, ParseIntPipe,
   Query,
 } from '@nestjs/common';
+import { IsNotEmpty, IsString, IsInt, IsOptional, IsEnum, IsNumber } from 'class-validator';
+import { PlayerRole } from '../Entity/enums';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PlayerService } from '../players/players.service';
 import { JwtGuard } from 'src/auth/jwt.guard';
 import { teamLogoUploadOptions } from '../imports/team-upload.config';  // Same upload config for player logo
+ 
+export class CreatePlayerDto {
+  @IsNotEmpty()
+  @IsInt()
+  teamId: number;
+
+  @IsNotEmpty()
+  @IsString()
+  firstName: string;
+
+  @IsNotEmpty()
+  @IsString()
+  lastName: string;
+
+  @IsNotEmpty()
+  @IsEnum(PlayerRole)
+  role: PlayerRole;
+
+  @IsNotEmpty()
+  @IsInt()
+  shirtNo: number;
+
+  @IsOptional()
+  @IsString()
+  dateOfBirth?: string;
+
+  @IsOptional()
+  @IsString()
+  battingStyle?: string;
+
+  @IsOptional()
+  @IsString()
+  bowlingStyle?: string;
+
+  @IsOptional()
+  @IsInt()
+  noOfMatches?: number;
+
+  @IsOptional()
+  @IsString()
+  strikeRate?: string;
+
+  @IsOptional()
+  @IsString()
+  image?: string;
+}
 
 @UseGuards(JwtGuard)
 @Controller('players')
 export class PlayerController {
-  constructor(private readonly playerService: PlayerService) {}
+  constructor(private readonly playerService: PlayerService) { }
 
   @Post('store')
   @UseInterceptors(FileInterceptor('logo', teamLogoUploadOptions))
-  async create(@Body() data: any, @UploadedFile() logo?: Express.Multer.File) {
+  async create(@Body() data: CreatePlayerDto, @UploadedFile() logo?: Express.Multer.File) {
     return this.playerService.create(data, logo);
   }
 
@@ -33,7 +81,7 @@ export class PlayerController {
   @UseInterceptors(FileInterceptor('logo', teamLogoUploadOptions))
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() data: any,
+    @Body() data: Partial<CreatePlayerDto>,
     @UploadedFile() logo?: Express.Multer.File,
   ) {
     return this.playerService.update(id, data, logo);

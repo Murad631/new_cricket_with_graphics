@@ -418,34 +418,120 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        // === 1. RENDER LOGIC ===
+        function renderWicket(data) {
+            console.log("Rendering Wicket Data:", data);
+            
+            // Player Name
+            if (data.firstName) document.querySelector('.fn').textContent = data.firstName;
+            if (data.lastName) document.querySelector('.ln').textContent = data.lastName;
+            
+            // Score
+            if (data.runs !== undefined) document.querySelector('.runs').textContent = data.runs;
+            if (data.balls !== undefined) document.querySelector('.balls').textContent = `(${data.balls})`;
+            
+            // Stats
+            const statVals = document.querySelectorAll('.stat-val');
+            if (data.fours !== undefined) statVals[0].textContent = data.fours;
+            if (data.sixes !== undefined) statVals[1].textContent = data.sixes;
+            if (data.strikeRate !== undefined) statVals[2].textContent = data.strikeRate;
+            if (data.dotBalls !== undefined) statVals[3].textContent = data.dotBalls;
+
+            // Dismissal Line
+            const dismissalLine = document.querySelector('.dismissal-line');
+            const type = data.wicketType;
+            const bowler = data.bowlerName || "BOWLER";
+            const fielder = data.fielderName || "";
+
+            let html = '';
+            if (type === 'BOWLED') {
+                html = `<span class="small-txt">b</span> <span>${bowler}</span>`;
+            } else if (type === 'CAUGHT') {
+                html = `<span class="small-txt">c</span> <span>${fielder}</span> <span class="small-txt">b</span> <span>${bowler}</span>`;
+            } else if (type === 'LBW') {
+                html = `<span class="small-txt">lbw b</span> <span>${bowler}</span>`;
+            } else if (type === 'RUN_OUT') {
+                html = `<span class="small-txt">run out</span> <span>(${fielder})</span>`;
+            } else if (type === 'STUMPED') {
+                html = `<span class="small-txt">st</span> <span>${fielder}</span> <span class="small-txt">b</span> <span>${bowler}</span>`;
+            } else if (type === 'HIT_WICKET') {
+                html = `<span class="small-txt">hit wicket b</span> <span>${bowler}</span>`;
+            } else {
+                html = `<span>OUT</span>`;
+            }
+            dismissalLine.innerHTML = html;
+
+            show();
+        }
+
+        // === 2. ANIMATION LOGIC ===
+        let hideTimeout;
+
+        function show() {
+            clearTimeout(hideTimeout);
+
             const root = document.getElementById('dismissal-card');
-            gsap.set(root, { visibility: 'visible', opacity: 0, y: 0 });
+            
+            // Clean slate any existing animations so it can be re-triggered correctly
+            gsap.killTweensOf([root, '.logo-section', '.player-content', '.flag-box', '.out-badge', '.stat-group']);
+            gsap.set([root, '.logo-section', '.player-content', '.flag-box', '.out-badge', '.stat-group'], { clearProps: 'all' });
+
+            gsap.set(root, { visibility: 'visible', opacity: 0, y: 50 });
             
             const tl = gsap.timeline();
             tl.to(root, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' })
               .from('.logo-section', { x: -140, duration: 0.6, ease: 'power2.out' }, '-=0.4')
               .from('.player-content', { x: 50, opacity: 0, duration: 0.6 }, '-=0.4')
               .from('.flag-box, .out-badge', { scale: 0, opacity: 0, duration: 0.6, stagger: 0.1, ease: 'back.out' }, '-=0.2')
-              .from('.stat-group', { y: 0, opacity: 0, duration: 0.4, stagger: 0.05 }, '-=0.4');
-        });
+              .from('.stat-group', { y: 20, opacity: 0, duration: 0.4, stagger: 0.05 }, '-=0.4');
+
+            // Auto-hide after 7 seconds
+            hideTimeout = setTimeout(() => {
+                hide();
+            }, 7000);
+        }
 
         function hide() {
+            clearTimeout(hideTimeout);
+            
             const tl = gsap.timeline({ defaults: { ease: 'power2.in' } });
-            tl.to('.stat-group', { opacity: 0, duration: 0.28, stagger: 0.04 })
+            tl.to('.stat-group', { opacity: 0, y: 20, duration: 0.28, stagger: 0.04 })
                 .to('.flag-box, .out-badge', { scale: 0, opacity: 0, duration: 0.35, stagger: 0.08, ease: 'back.in' }, '-=0.1')
                 .to('.player-content', { x: 50, opacity: 0, duration: 0.45 }, '-=0.15')
                 .to('.logo-section', { x: -140, opacity: 0, duration: 0.45 }, '-=0.25')
-                .to('#dismissal-card', { opacity: 0, duration: 0.5 }, '-=0.2');
+                .to('#dismissal-card', { opacity: 0, y: 50, duration: 0.5 }, '-=0.2')
+                .set('#dismissal-card', { visibility: 'hidden' });
         }
-    
-    
 
-        // === LISTEN FOR CANVAS HIDE COMMAND ===
+        // === 3. LISTENERS (MASTER CANVAS & SOCKET) ===
         window.addEventListener('message', (e) => {
-            if (e.data === 'HIDE') hide();
+            const msg = e.data;
+            if (msg === 'HIDE' || msg.type === 'HIDE') {
+                hide();
+            } else if (msg.type === 'SHOW' || msg.type === 'UPDATE') {
+                renderWicket(msg.data);
+            }
+        });
+
+        // Standalone Socket Listener (Matches leaderboard pattern)
+        if (typeof io !== 'undefined') {
+            const socket = io('http://localhost:3000');
+            socket.on('graphic_event', (p) => {
+                if (p.graphic === 'wicket_dismissal') {
+                    if (p.type === 'show' || p.type === 'update') {
+                        renderWicket(p.data);
+                    } else if (p.type === 'hide') {
+                        hide();
+                    }
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+             gsap.set('#dismissal-card', { visibility: 'hidden', opacity: 0 });
         });
     </script>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
 </body>
 
 </html>

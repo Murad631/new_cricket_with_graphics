@@ -240,6 +240,7 @@ async matchSquadBothTeams(matchId: number) {
       .innerJoin('players', 'p', 'p.id = ms.playerId')
       .select([
         'm.id as matchId',
+        'ms.id as id',
         'm.title as matchTitle',
         'm.format as format',
         'm.venue as venue',
@@ -297,6 +298,7 @@ async matchSquadBothTeams(matchId: number) {
       }
 
       teamMap.get(teamId).playingXI.push({
+        id: Number(r.id), // MatchSquad ID
         battingPos: r.battingPos != null ? Number(r.battingPos) : null,
         flags: {
           captain: !!Number(r.isCaptain),

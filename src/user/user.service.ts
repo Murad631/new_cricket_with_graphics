@@ -24,8 +24,22 @@ export class UserService {
     where: { username: data.username },
   });
 
-  if (exist) {
-    throw new BadRequestException('Username is already registered');
+    if (exist) {
+      throw new BadRequestException('Username is already registered');
+    }
+
+    const user = this.userRepository.create({
+      username: data.username,
+      password: hashedPassword,
+      role_id: data.role_id || 2,
+    });
+
+    try {
+      await this.userRepository.save(user);
+      return true;
+    } catch (error) {
+      throw new BadRequestException('User registration failed');
+    }
   }
 
   const user = this.userRepository.create({

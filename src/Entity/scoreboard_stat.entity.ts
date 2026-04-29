@@ -38,7 +38,9 @@ export class ScoreboardState {
   @Column({ type: 'int', default: 0  })
   total_extra: number;
 
+  @Column({ type: 'int', default: 1 })
+  striker_index: number; // 1 for strikerSquadId, 2 for nonStrikerSquadId
+
   @UpdateDateColumn()
   updatedAt: Date;
-
 }

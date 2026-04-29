@@ -17,6 +17,16 @@ export class DeliveriesController {
     return delivery;
   }
 
+  @Get('timeline/:matchId')
+  async getTimeline(@Param('matchId', ParseIntPipe) matchId: number) {
+    return this.service.getTimeline(matchId);
+  }
+
+  @Post('clean-all')
+  async cleanAll() {
+    return this.service.cleanAll();
+  }
+
 
   @Post('current-run-rate')
   async getRunRates(@Body() body: any) {

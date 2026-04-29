@@ -1,17 +1,16 @@
-// src/users/entities/user.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-@Entity()
-export class User {
+@Entity('roles')
+export class Role {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
-  role_name: string;
+  @Column({ unique: true })
+  name: string;
 
   @CreateDateColumn()
- created_at: Date;
+  created_at: Date;
 
- @UpdateDateColumn()
-   updated_at: Date;
+  @UpdateDateColumn()
+  updated_at: Date;
 }

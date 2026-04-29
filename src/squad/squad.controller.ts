@@ -12,25 +12,56 @@ import {
 } from '@nestjs/common';
 import { JwtGuard } from 'src/auth/jwt.guard';
 import { SquadService } from './squad.service';
+import { IsNotEmpty, IsInt, IsOptional, IsBoolean } from 'class-validator';
+
+export class CreateSquadDto {
+  @IsNotEmpty()
+  @IsInt()
+  teamId: number;
+
+  @IsNotEmpty()
+  @IsInt()
+  playerId: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isPlayingXI?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isCaptain?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isViceCaptain?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isWicketKeeper?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  battingPos?: number;
+}
 
 @UseGuards(JwtGuard)
 @Controller('squad')
 export class SquadController {
-  constructor(private readonly squadService: SquadService) {}
+  constructor(private readonly squadService: SquadService) { }
 
 
   // ✅ POST /squad/:matchId/store
   @Post('store/:matchId')
   async createStore(
     @Param('matchId', ParseIntPipe) matchId: number,
-    @Body() data: any,
+    @Body() data: CreateSquadDto,
   ) {
     return this.squadService.create(matchId, data);
   }
 
   // ✅ GET /squad/:matchId  (optional ?teamId=)
   @Get('list/:matchId')
- async  listBase(
+  async listBase(
     @Param('matchId', ParseIntPipe) matchId: number,
     @Query('teamId') teamId?: string,
   ) {
@@ -55,19 +86,19 @@ export class SquadController {
   //   return this.squadService.findOneWithJoins(matchId, id);
   // }
   @Get(':matchId/find/:id')
-findOne(
-  @Param('matchId', ParseIntPipe) matchId: number,
-  @Param('id', ParseIntPipe) id: number,
-) {
-  return this.squadService.findOneWithJoins(matchId, id);
-}
+  findOne(
+    @Param('matchId', ParseIntPipe) matchId: number,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.squadService.findOneWithJoins(matchId, id);
+  }
 
   // ✅ PUT /squad/:matchId/update/:id
   @Put(':matchId/update/:id')
   update(
     @Param('matchId', ParseIntPipe) matchId: number,
     @Param('id', ParseIntPipe) id: number,
-    @Body() data: any,
+    @Body() data: Partial<CreateSquadDto>,
   ) {
     return this.squadService.update(matchId, id, data);
   }

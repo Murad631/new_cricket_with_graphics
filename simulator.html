@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cricket Match Simulator - Audit Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #a855f7;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+        body { background: var(--dark); color: var(--light); overflow-x: hidden; padding: 2rem; min-height: 100vh; }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        .header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 2rem; padding: 2rem; background: var(--glass); 
+            border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 { font-size: 2.5rem; font-weight: 800; background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white; border: none; padding: 1rem 2rem; border-radius: 12px;
+            font-weight: 600; cursor: pointer; transition: 0.3s;
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(99, 102, 241, 0.5); }
+
+        .dashboard { display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; }
+
+        .card { 
+            background: var(--glass); border-radius: 20px; padding: 2rem;
+            border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px);
+        }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .stat-box { background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 15px; text-align: center; }
+        .stat-label { font-size: 0.8rem; opacity: 0.6; margin-bottom: 0.5rem; }
+        .stat-value { font-size: 1.5rem; font-weight: 600; }
+
+        .log-container { height: 500px; overflow-y: auto; padding-right: 1rem; }
+        .log-entry { 
+            padding: 1rem; margin-bottom: 0.5rem; background: rgba(255,255,255,0.03); 
+            border-radius: 10px; border-left: 4px solid var(--primary);
+            animation: slideIn 0.3s ease-out;
+        }
+        .log-entry.wicket { border-left-color: var(--danger); background: rgba(239, 68, 68, 0.05); }
+        .log-entry.extra { border-left-color: var(--warning); }
+        .log-time { font-size: 0.7rem; opacity: 0.4; }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+        .badge { font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 5px; margin-left: 0.5rem; }
+        .badge-wicket { background: var(--danger); }
+        .badge-extra { background: var(--warning); color: black; }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>Match Simulator Pro</h1>
+                <p style="opacity: 0.6;">Automatic Ball-by-Ball QA & Audit Dashboard</p>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <input type="text" id="tokenInput" placeholder="Paste JWT Token here..." 
+                    style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 0.8rem; border-radius: 10px; width: 250px;">
+                <button id="setupBtn" class="btn" style="background: linear-gradient(135deg, #10b981, #059669);">1-Click Setup & Run</button>
+                <button id="startBtn" class="btn">Start Simulation</button>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="card">
+                <h2 style="margin-bottom: 1.5rem;">Live Scoreboard</h2>
+                <div class="stats-grid">
+                    <div class="stat-box" style="grid-column: span 2;">
+                        <div class="stat-label">Total Score</div>
+                        <div id="score" class="stat-value">0/0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Overs</div>
+                        <div id="overs" class="stat-value">0.0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">CRR</div>
+                        <div id="crr" class="stat-value">0.0</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 2rem;">
+                    <h3 style="font-size: 1rem; margin-bottom: 1rem;">Current Action</h3>
+                    <div id="actionMsg" style="color: #818cf8; font-weight: 600;">Waiting for start...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 style="margin-bottom: 1.5rem;">Ball-by-Ball Timeline</h2>
+                <div id="log" class="log-container">
+                    <div class="log-entry">Click "1-Click Setup" to initialize match and start.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const startBtn = document.getElementById('startBtn');
+        const setupBtn = document.getElementById('setupBtn');
+        const tokenInput = document.getElementById('tokenInput');
+        const logContainer = document.getElementById('log');
+        const scoreEl = document.getElementById('score');
+        const oversEl = document.getElementById('overs');
+        const crrEl = document.getElementById('crr');
+        const actionMsgEl = document.getElementById('actionMsg');
+
+        let isRunning = false;
+
+        async function api(path, method = 'GET', body = null) {
+            const token = tokenInput.value.trim();
+            if(!token) {
+                alert("Please paste your JWT token first!");
+                throw new Error("No token");
+            }
+
+            const options = {
+                method,
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            };
+            if(body) options.body = JSON.stringify(body);
+
+            const res = await fetch(`http://localhost:3000/${path}`, options);
+            if(!res.ok) {
+                const err = await res.json();
+                throw new Error(err.message || "Request failed");
+            }
+            return res.json();
+        }
+
+        const events = [
+            { run: 0, extraType: null, iswicket: null }, // Dot
+            { run: 0, extraType: null, iswicket: null }, // Dot
+            { run: 1, extraType: null, iswicket: null }, // Single
+            { run: 1, extraType: null, iswicket: null }, // Single
+            { run: 2, extraType: null, iswicket: null }, // Double
+            { run: 4, extraType: null, iswicket: null }, // Four
+            { run: 4, extraType: null, iswicket: null }, // Four
+            { run: 6, extraType: null, iswicket: null }, // Six
+            { run: 0, extraType: "WD", exrtaRun: 0 },    // Wide (Rare)
+            { run: 1, extraType: "NB", exrtaRun: 0 },    // No-Ball (Rare)
+            { run: 0, iswicket: "W", wicketType: "CAUGHT" } // Wicket (Rare)
+        ];
+
+        async function setupAndRun() {
+            try {
+                actionMsgEl.innerText = "Cleaning database...";
+                logContainer.innerHTML = '';
+                addLog({ lastAction: "Wiping old data (Clean Sweep)...", isInfo: true });
+                
+                await api('delivery/clean-all', 'POST');
+                
+                actionMsgEl.innerText = "Setting up match...";
+                addLog({ lastAction: "Finding Match...", isInfo: true });
+
+                const matches = await api('matches/list');
+                if(!matches.length) throw new Error("No matches found in DB");
+                const match = matches[0];
+
+                let innings = await api(`innings/list?matchId=${match.id}`);
+                if(!innings.length) {
+                    addLog({ lastAction: "Innings missing. Creating now...", isInfo: true });
+                    await api('innings/store', 'POST', {
+                        matchId: match.id,
+                        battingTeamId: match.team1Id,
+                        bowlingTeamId: match.team2Id
+                    });
+                    innings = await api(`innings/list?matchId=${match.id}`);
+                }
+                if(!innings.length) throw new Error("Could not create innings");
+                
+                // Start with the first available active inning
+                const inning = innings.find(i => i.number === 'FIRST') || innings[0];
+                await runInning(match, inning, innings);
+            } catch (e) {
+                alert("Setup Failed: " + e.message);
+                actionMsgEl.innerText = "Setup Failed.";
+            }
+        }
+
+        async function runInning(match, inning, allInnings) {
+            actionMsgEl.innerText = `Starting ${inning.number} Inning...`;
+            addLog({ lastAction: `Inning ${inning.number} started.`, isInfo: true });
+
+            await api('scoreboard/start-innning', 'POST', { id: inning.id });
+
+            const squadData = await api(`squad/get-matches-squads/${match.id}`);
+            if(!squadData || !squadData.teams || squadData.teams.length < 2) {
+                throw new Error("Match squad is not complete. Please add Playing XI for both teams.");
+            }
+
+            const batTeamId = inning.battingTeamId;
+            const batTeam = squadData.teams.find(t => t.id == batTeamId);
+            const bowlTeam = squadData.teams.find(t => t.id != batTeamId);
+
+            if(!batTeam || !bowlTeam || !batTeam.playingXI.length || !bowlTeam.playingXI.length) {
+                throw new Error("Playing XI is missing for one of the teams.");
+            }
+
+            await api('scoreboard/setPlayers', 'POST', {
+                striker: batTeam.playingXI[0].id, 
+                nonStriker: batTeam.playingXI[1].id,
+                bowler: bowlTeam.playingXI[0].id
+            });
+            addLog({ lastAction: "Players set on crease.", isInfo: true });
+
+            await startSim(match, inning, allInnings, batTeam.playingXI, bowlTeam.playingXI);
+        }
+
+        async function startSim(match, inning, allInnings, batSquad, bowlSquad) {
+            isRunning = true;
+            startBtn.disabled = true;
+            setupBtn.disabled = true;
+            
+            const ballsToSim = 60; // 10 Overs for full QA
+            let currentBowlerId = bowlSquad[0].id;
+            let nextBatIndex = 2; // Next batter to come in (0 and 1 are already on crease)
+
+            for (let i = 0; i < ballsToSim; i++) {
+                const event = events[Math.floor(Math.random() * events.length)];
+                try {
+                    // 1. Change Bowler every 6 balls
+                    if (i > 0 && i % 6 === 0) {
+                        const newBowler = bowlSquad.find(b => b.id !== currentBowlerId) || bowlSquad[0];
+                        currentBowlerId = newBowler.id;
+                        await api('scoreboard/setPlayers', 'POST', { bowler: currentBowlerId });
+                    }
+
+                    const result = await api('delivery/ball', 'POST', event);
+                    updateUI(result);
+                    addLog(result);
+
+                    // 2. Handle Wicket (Auto-replace batter)
+                    if (event.iswicket === "W") {
+                        if (nextBatIndex < batSquad.length) {
+                            const newBatter = batSquad[nextBatIndex++];
+                            addLog({ lastAction: "Wicket! Bringing in " + newBatter.id, isInfo: true });
+                            
+                            // Replace the player who got out (Slot 1 or Slot 2)
+                            // We check result to see who is missing or we just set the one that was out
+                            // For simplicity, we can just call setPlayers with the new batter
+                            // But we need to know who got out. 
+                            // Let's just use a simple approach for now:
+                            await api('scoreboard/setPlayers', 'POST', {
+                                [result.onStrike === 1 ? 'striker' : 'nonStriker']: newBatter.id
+                            });
+                        } else {
+                            addLog({ lastAction: "All Out!", isInfo: true });
+                            break;
+                        }
+                    }
+                    
+                    if(result.totalWicket >= 10) break;
+                } catch (e) {
+                    addLog({ lastAction: "Error: " + e.message, isError: true });
+                    break;
+                }
+                await new Promise(r => setTimeout(r, 2000));
+            }
+
+            // Inning End
+            await api('delivery/inning-end', 'POST', { matchId: match.id });
+            addLog({ lastAction: `${inning.number} Inning Ended.`, isInfo: true });
+
+            if(inning.number === 'FIRST') {
+                const secondInning = allInnings.find(i => i.number === 'SECOND');
+                if(secondInning) {
+                    await new Promise(r => setTimeout(r, 3000));
+                    await runInning(match, secondInning, allInnings);
+                }
+            } else {
+                finishMatch(match);
+            }
+        }
+
+        async function finishMatch(match) {
+            isRunning = false;
+            startBtn.disabled = false;
+            setupBtn.disabled = false;
+            actionMsgEl.innerText = "Match Finished!";
+            
+            const timeline = await api(`delivery/timeline/${match.id}`);
+            showSummary(timeline);
+        }
+
+        function showSummary(timeline) {
+            const summaryHtml = `
+                <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; height: 80%; background: #1e293b; border: 2px solid #6366f1; border-radius: 20px; padding: 2rem; z-index: 1000; overflow-y: auto; box-shadow: 0 0 100px rgba(0,0,0,0.8);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 2rem;">
+                        <h2>Match Summary Report</h2>
+                        <button onclick="this.parentElement.parentElement.remove()" class="btn" style="padding: 0.5rem 1rem;">Close</button>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid #475569;">
+                                <th style="padding: 1rem;">Seq</th>
+                                <th style="padding: 1rem;">Over.Ball</th>
+                                <th style="padding: 1rem;">Action</th>
+                                <th style="padding: 1rem;">Runs</th>
+                                <th style="padding: 1rem;">Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${timeline.map(t => `
+                                <tr style="border-bottom: 1px solid #334155;">
+                                    <td style="padding: 0.8rem;">${t.seq}</td>
+                                    <td style="padding: 0.8rem;">${t.overNumber}.${t.ballIndex}</td>
+                                    <td style="padding: 0.8rem;">${t.symbol}</td>
+                                    <td style="padding: 0.8rem;">${t.total_runs}</td>
+                                    <td style="padding: 0.8rem;">${t.kind}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', summaryHtml);
+        }
+
+        function updateUI(data) {
+            scoreEl.innerText = `${data.totalRun}/${data.totalWicket}`;
+            oversEl.innerText = data.overs.toFixed(1);
+            crrEl.innerText = (data.totalRun / (data.overs || 1)).toFixed(2);
+            actionMsgEl.innerText = data.lastAction;
+        }
+
+        function addLog(data) {
+            const entry = document.createElement('div');
+            const isWicket = data.wicket;
+            const isExtra = data.lastAction && (data.lastAction.includes('WD') || data.lastAction.includes('NB'));
+            
+            entry.className = `log-entry ${isWicket ? 'wicket' : ''} ${isExtra ? 'extra' : ''}`;
+            if(data.isInfo) entry.style.borderLeftColor = "#10b981";
+            if(data.isError) entry.style.borderLeftColor = "#ef4444";
+
+            const time = new Date().toLocaleTimeString();
+            entry.innerHTML = `
+                <div class="log-time">${time}</div>
+                <div>${data.lastAction}</div>
+                ${isWicket ? '<span class="badge badge-wicket">WICKET</span>' : ''}
+                ${isExtra ? '<span class="badge badge-extra">EXTRA</span>' : ''}
+            `;
+            
+            logContainer.insertBefore(entry, logContainer.firstChild);
+        }
+
+        startBtn.addEventListener('click', startSim);
+        setupBtn.addEventListener('click', setupAndRun);
+    </script>
+</body>
+</html>

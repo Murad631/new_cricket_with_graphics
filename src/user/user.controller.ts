@@ -1,5 +1,5 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
-import { IsInt, IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
 import { UserService } from './user.service';
 import { Res } from '@nestjs/common';
 
@@ -15,9 +15,8 @@ import { Res } from '@nestjs/common';
 
 
 
-//     // @IsInt({ message: 'Role ID must be a Integer' })
-//     // @IsNotEmpty({ message: 'Role ID cannot Empty' })
-//     // role_id: string;
+    @IsOptional()
+    role_id?: any;
 
 // }
 @Controller('user')
@@ -30,8 +29,8 @@ export class UserController {
 
     @Post('register-user')
     @HttpCode(HttpStatus.CREATED) // 201
-    async register(@Body() request) {
-   const message = await this.userService.register(request);
+    async register(@Body() request: RegisterDto) {
+        const message = await this.userService.register(request);
         return {
             message: 'User registered successfully',
         };

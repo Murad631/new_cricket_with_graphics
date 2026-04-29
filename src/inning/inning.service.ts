@@ -31,40 +31,38 @@ export class InningsService {
     }
 
 
-    const fetchInning = await this.innRepo.findOne({where:{matchId :match.id, 
-    battingTeamId:battingTeamId, bowlingTeamId:bowlingTeamId, isActive:true }});
-    if (fetchInning) throw new BadRequestException('Inning Already Found');
-    
-   const row1 = this.innRepo.create({
-    matchId : matchId,
-    number: 'FIRST',
-    battingTeamId,
-    bowlingTeamId,
-    targetRuns: data.targetRuns ? Number(data.targetRuns) : null,
-    startedAt: data.startedAt ? new Date(data.startedAt) : null,
-    endedAt: data.endedAt ? new Date(data.endedAt) : null,
-    isActive: true,
-  } as any);
+    // Deactivate any existing active innings for this match
+    await this.innRepo.update({ matchId: matchId, isActive: true }, { isActive: false });
 
-// Create the second row where the batting and bowling teams are swapped
-  const row2 = this.innRepo.create({
-    matchId : matchId,
-    number: 'SECOND',
-    battingTeamId: bowlingTeamId ,  // Swap batting and bowling
-    bowlingTeamId:battingTeamId  ,  // Swap batting and bowling
-    targetRuns: data.targetRuns ? Number(data.targetRuns) : null,
-    startedAt: data.startedAt ? new Date(data.startedAt) : null,
-    endedAt: data.endedAt ? new Date(data.endedAt) : null,
-    isActive: true,
-  } as any);
+    const row1 = this.innRepo.create({
+      matchId: matchId,
+      number: 'FIRST',
+      battingTeamId,
+      bowlingTeamId,
+      targetRuns: data.targetRuns ? Number(data.targetRuns) : null,
+      startedAt: data.startedAt ? new Date(data.startedAt) : null,
+      endedAt: data.endedAt ? new Date(data.endedAt) : null,
+      isActive: true, // First inning starts as active
+    } as any);
 
-// Insert both records in a transaction (atomic operation)
-await this.innRepo.manager.transaction(async (manager) => {
-  await manager.save(row1);
-  await manager.save(row2);
-});
+    const row2 = this.innRepo.create({
+      matchId: matchId,
+      number: 'SECOND',
+      battingTeamId: bowlingTeamId, // Swap batting and bowling
+      bowlingTeamId: battingTeamId, // Swap batting and bowling
+      targetRuns: data.targetRuns ? Number(data.targetRuns) : null,
+      startedAt: data.startedAt ? new Date(data.startedAt) : null,
+      endedAt: data.endedAt ? new Date(data.endedAt) : null,
+      isActive: false, // Second inning starts as inactive
+    } as any);
 
-    return {row1 , row2 }
+    // Insert both records in a transaction
+    await this.innRepo.manager.transaction(async (manager) => {
+      await manager.save(row1);
+      await manager.save(row2);
+    });
+
+    return { row1, row2 }
   }
 
   async list(matchId?: number) {
