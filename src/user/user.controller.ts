@@ -8,12 +8,11 @@ class RegisterDto {
     @IsNotEmpty({ message: 'Username cannot Empty' })
     username: string;
 
-
     @IsString({ message: 'Password must be a string' })
     @IsNotEmpty({ message: 'Password cannot Empty' })
     password: string;
 
-    
+    @IsOptional()
     role_id?: any;
 
 }
