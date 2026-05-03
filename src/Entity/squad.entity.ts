@@ -42,4 +42,7 @@ export class MatchSquad {
   // soft enable/disable this row
   @Column({ type: 'tinyint', default: 1 })
   isActive: boolean;
+
+  @Column({ type: 'enum', enum: ['pending', 'playing', 'placed', 'out'], default: 'pending' })
+  status: 'pending' | 'playing' | 'placed' | 'out';
 }

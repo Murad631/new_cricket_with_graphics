@@ -76,7 +76,7 @@ export class TeamService {
  async teamWithPalyer(id?: number) {
   const teams = await this.teamRepository.find({
     where: id ? { id } : undefined,
-    select: ['id', 'name', 'shortName', 'logo', 'status'], // adjust to your columns
+    select: ['id', 'name', 'shortName', 'logo', 'status', 'primaryColor', 'secondaryColor'], // adjust to your columns
     order: { id: 'ASC' },
   });
 

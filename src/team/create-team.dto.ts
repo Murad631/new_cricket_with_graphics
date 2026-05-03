@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, Length, IsEnum } from 'class-validator';
+import { IsIn, IsOptional, IsString, Length, IsEnum, IsArray } from 'class-validator';
 import { TeamStatus } from '../Entity/enums';
 
 export class CreateTeamDto {
@@ -14,9 +14,9 @@ export class CreateTeamDto {
   @IsString()
   logo?: string;
 
-  @IsString()
-  @Length(4, 7)
-  primaryColor: string; // #RRGGBB
+  @IsArray()
+  @IsString({ each: true })
+  primaryColor: string[]; // ['#RRGGBB'] or ['#RRGGBB', '#RRGGBB']
 
   @IsString()
   @Length(4, 7)

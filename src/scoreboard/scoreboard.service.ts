@@ -133,7 +133,7 @@ export class ScoreboardService {
 
       // 2. Manage the single-row scoreboard state (ID: 1)
       const findStateBoard = await this.stateRepo.findOne({ where: { id: 1 } });
-      
+
       if (findStateBoard) {
         await this.stateRepo.update({ id: 1 }, {
           matchId: fetchInning.matchId,
@@ -351,6 +351,9 @@ export class ScoreboardService {
         if (Number(strikerSquad.teamId) !== batTeam) {
           throw new BadRequestException(`Striker (team ${strikerSquad.teamId}) must belong to the active batting team (team ${batTeam}).`);
         }
+        if (strikerSquad.status !== 'pending' && strikerSquad.status !== 'playing') {
+          throw new BadRequestException(`Striker status is ${strikerSquad.status}. Only pending players can be set.`);
+        }
       }
 
       if (nonStriker) {
@@ -358,6 +361,9 @@ export class ScoreboardService {
         if (!nonStrikerSquad) throw new BadRequestException('Non-striker not found in squad.');
         if (Number(nonStrikerSquad.teamId) !== batTeam) {
           throw new BadRequestException(`Non-striker (team ${nonStrikerSquad.teamId}) must belong to the active batting team (team ${batTeam}).`);
+        }
+        if (nonStrikerSquad.status !== 'pending' && nonStrikerSquad.status !== 'playing') {
+          throw new BadRequestException(`Non-striker status is ${nonStrikerSquad.status}. Only pending players can be set.`);
         }
       }
 
@@ -367,12 +373,32 @@ export class ScoreboardService {
         if (Number(bowlerSquad.teamId) !== bowlTeam) {
           throw new BadRequestException(`Bowler (team ${bowlerSquad.teamId}) must belong to the active bowling team (team ${bowlTeam}).`);
         }
+
+        const player = await this.squadRepo.manager.getRepository('Player').findOne({ where: { id: bowlerSquad.playerId } }) as any;
+        if (player.role !== 'BOWL' && player.role !== 'ALL_ROUNDER') {
+          throw new BadRequestException('Only players with role BOWL or ALL_ROUNDER can be select for bowling.');
+        }
+
+        const lastOver = await this.overSummaryRepo.findOne({
+          where: { matchId: state.matchId, inningsId: state.currentInningsId },
+          order: { overNumber: 'DESC' }
+        });
+
+        if (lastOver && lastOver.status === 0 && Number(lastOver.player_id) === Number(bowler)) {
+          throw new BadRequestException('Back-to-back overs by the same bowler are not allowed.');
+        }
       }
 
       // 2️⃣ Prepare partial update object (do NOT reset striker_index, preserve rotation!)
       const updatePayload: any = {};
-      if (striker !== undefined && striker !== null) updatePayload.strikerSquadId = striker;
-      if (nonStriker !== undefined && nonStriker !== null) updatePayload.nonStrikerSquadId = nonStriker;
+      if (striker !== undefined && striker !== null) {
+        updatePayload.strikerSquadId = striker;
+        await this.squadRepo.update(striker, { status: 'playing' });
+      }
+      if (nonStriker !== undefined && nonStriker !== null) {
+        updatePayload.nonStrikerSquadId = nonStriker;
+        await this.squadRepo.update(nonStriker, { status: 'playing' });
+      }
       if (bowler !== undefined && bowler !== null) updatePayload.bowlerSquadId = bowler;
 
       await this.stateRepo.update({ id: 1 }, updatePayload);
@@ -406,9 +432,13 @@ export class ScoreboardService {
           'battingTeam.name AS batting_name',
           'battingTeam.shortName AS batting_short_name',
           'battingTeam.logo AS batting_logo',
+          'battingTeam.primaryColor AS batting_primary_color',
+          'battingTeam.secondaryColor AS batting_secondary_color',
           'bowlingTeam.name AS bowling_name',
           'bowlingTeam.shortName AS bowling_short_name',
           'bowlingTeam.logo AS bowling_logo',
+          'bowlingTeam.primaryColor AS bowling_primary_color',
+          'bowlingTeam.secondaryColor AS bowling_secondary_color',
         ])
         .where('i.id = :id', { id: updatedState.currentInningsId })
         .getRawOne();
@@ -505,7 +535,7 @@ export class ScoreboardService {
         player1_ball: responseData.striker.balls,
         player2_ball: responseData.nonStriker.balls,
         ball_state: responseData.bowler.over_state || [],
-        onStrike: 1
+        onStrike: updatedState.striker_index ?? 1
       };
 
       // 7️⃣ Trigger Graphics Scoreboard
@@ -513,14 +543,14 @@ export class ScoreboardService {
         type: 'show',
         graphic: 'scoreboard',
         data: {
-          playersData: { ...responseData, striker_side: 1 },
+          playersData: { ...responseData, striker_side: updatedState.striker_index ?? 1 },
           scoreboardData
-        } 
+        }
       });
 
       return responseData;
     } catch (error) {
-      throw new BadRequestException('Error saving/updating players: ' + error.message);
+      throw new BadRequestException(error.message);
     }
   }
 
@@ -531,10 +561,10 @@ export class ScoreboardService {
     try {
       const state = await this.stateRepo.findOne({ where: { id: 1 } });
       if (!state) throw new Error("State not found");
-      
+
       const newIndex = state.striker_index === 1 ? 2 : 1;
       await this.stateRepo.update({ id: 1 }, { striker_index: newIndex });
-      
+
       return { message: "strike switched", onStrike: newIndex };
     }
     catch (error) {

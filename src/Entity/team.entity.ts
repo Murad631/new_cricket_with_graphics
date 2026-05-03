@@ -21,8 +21,8 @@ export class Team {
   @Column({ type: 'varchar', length: 500, nullable: true })
   logo?: string; // file path/url
 
-  @Column({ type: 'varchar', length: 7 })
-  primaryColor: string; // #RRGGBB
+  @Column({ type: 'simple-array' })
+  primaryColor: string[]; // ['#RRGGBB'] or ['#RRGGBB', '#RRGGBB']
 
   @Column({ type: 'varchar', length: 7 })
   secondaryColor: string; // #RRGGBB

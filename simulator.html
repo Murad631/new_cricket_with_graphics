@@ -84,7 +84,12 @@
                 <input type="text" id="tokenInput" placeholder="Paste JWT Token here..." 
                     style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 0.8rem; border-radius: 10px; width: 250px;">
                 <button id="setupBtn" class="btn" style="background: linear-gradient(135deg, #10b981, #059669);">1-Click Setup & Run</button>
-                <button id="startBtn" class="btn">Start Simulation</button>
+                <button id="startBtn" class="btn">Start Auto Sim</button>
+                <button id="nextBtn" class="btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); display: none;">Next Ball</button>
+                <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--glass); padding: 0.5rem 1rem; border-radius: 10px;">
+                    <input type="checkbox" id="manualMode" style="width: 20px; height: 20px; cursor: pointer;">
+                    <label for="manualMode" style="font-size: 0.9rem; cursor: pointer;">Manual</label>
+                </div>
             </div>
         </div>
 
@@ -124,6 +129,8 @@
     <script>
         const startBtn = document.getElementById('startBtn');
         const setupBtn = document.getElementById('setupBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const manualMode = document.getElementById('manualMode');
         const tokenInput = document.getElementById('tokenInput');
         const logContainer = document.getElementById('log');
         const scoreEl = document.getElementById('score');
@@ -132,6 +139,23 @@
         const actionMsgEl = document.getElementById('actionMsg');
 
         let isRunning = false;
+        let nextBallResolver = null;
+
+        manualMode.addEventListener('change', () => {
+            if (isRunning) {
+                nextBtn.style.display = manualMode.checked ? 'block' : 'none';
+                if (!manualMode.checked && nextBallResolver) {
+                    nextBallResolver(); // Resume auto if switched back
+                }
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (nextBallResolver) {
+                nextBallResolver();
+                nextBallResolver = null;
+            }
+        });
 
         async function api(path, method = 'GET', body = null) {
             const token = tokenInput.value.trim();
@@ -241,6 +265,10 @@
             startBtn.disabled = true;
             setupBtn.disabled = true;
             
+            if (manualMode.checked) {
+                nextBtn.style.display = 'block';
+            }
+            
             const ballsToSim = 60; // 10 Overs for full QA
             let currentBowlerId = bowlSquad[0].id;
             let nextBatIndex = 2; // Next batter to come in (0 and 1 are already on crease)
@@ -284,7 +312,15 @@
                     addLog({ lastAction: "Error: " + e.message, isError: true });
                     break;
                 }
-                await new Promise(r => setTimeout(r, 2000));
+
+                if (manualMode.checked) {
+                    nextBtn.style.display = 'block';
+                    actionMsgEl.innerText = "Paused: Click 'Next Ball'";
+                    await new Promise(resolve => { nextBallResolver = resolve; });
+                } else {
+                    nextBtn.style.display = 'none';
+                    await new Promise(r => setTimeout(r, 10000));
+                }
             }
 
             // Inning End
@@ -294,7 +330,12 @@
             if(inning.number === 'FIRST') {
                 const secondInning = allInnings.find(i => i.number === 'SECOND');
                 if(secondInning) {
-                    await new Promise(r => setTimeout(r, 3000));
+                    if (manualMode.checked) {
+                        actionMsgEl.innerText = "Inning Over. Click 'Next Ball' for 2nd Inning.";
+                        await new Promise(resolve => { nextBallResolver = resolve; });
+                    } else {
+                        await new Promise(r => setTimeout(r, 10000));
+                    }
                     await runInning(match, secondInning, allInnings);
                 }
             } else {
@@ -306,6 +347,7 @@
             isRunning = false;
             startBtn.disabled = false;
             setupBtn.disabled = false;
+            nextBtn.style.display = 'none';
             actionMsgEl.innerText = "Match Finished!";
             
             const timeline = await api(`delivery/timeline/${match.id}`);

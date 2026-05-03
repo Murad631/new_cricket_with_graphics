@@ -17,10 +17,10 @@ export class DeliveriesController {
     return delivery;
   }
 
-  @Get('timeline/:matchId')
-  async getTimeline(@Param('matchId', ParseIntPipe) matchId: number) {
-    return this.service.getTimeline(matchId);
-  }
+  // @Get('timeline/:matchId')
+  // async getTimeline(@Param('matchId', ParseIntPipe) matchId: number) {
+  //   return this.service.getTimeline(matchId);
+  // }
 
   @Post('clean-all')
   async cleanAll() {

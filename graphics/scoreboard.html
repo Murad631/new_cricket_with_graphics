@@ -155,13 +155,15 @@
 
         #player1_balls,
         #player2_balls {
-            fill: #00bef1; /* Bright theme cyan for contrast */
+            fill: #00bef1;
+            /* Bright theme cyan for contrast */
             font-size: 24px;
             font-weight: 600;
         }
 
         #striker_arrow_path {
-            fill: #fded00; /* Vibrant yellow arrow */
+            fill: #fded00;
+            /* Vibrant yellow arrow */
         }
 
         #bowler {
@@ -196,8 +198,8 @@
         }
 
         .disabled {
-            fill: gray;
-            opacity: 0.4;
+            fill: #888888 !important;
+            opacity: 0.5 !important;
             pointer-events: none;
         }
 
@@ -277,6 +279,9 @@
                 <clipPath id="bowl-flag-clip">
                     <path d="M 0 0 L 140 0 C 160 0 160 0 160 20 L 160 80 C 160 100 160 100 140 100 L 0 100 Z" />
                 </clipPath>
+
+                <!-- Dynamic Team Gradients Placeholder -->
+                <g id="team-gradients"></g>
             </defs>
 
             <g transform="translate(480, 50)">
@@ -291,16 +296,12 @@
                         clip-path="url(#bat-flag-clip)" />
                     <path d="M 20 0 L 160 0 L 160 100 L 20 100 A 20 20 0 0 1 0 80 L 0 20 A 20 20 0 0 1 20 0 Z"
                         fill="url(#gloss-shine)" clip-path="url(#bat-flag-clip)" />
-                    <rect x="0" y="70" width="160" height="30" fill="rgba(0,0,0,0.85)"
-                        clip-path="url(#bat-flag-clip)" />
-                    <text id="batting_team_name" x="80" y="93" text-anchor="middle"
-                        style="letter-spacing: 1px;">AUS</text>
                 </g>
 
                 <!-- PLAYERS PANEL -->
                 <g id="players_portion" transform="translate(160, 0)">
-                    <rect x="0" y="0" width="550" height="100" fill="url(#panel-grad-left)" stroke="url(#theme-border-grad)"
-                        stroke-width="3" />
+                    <rect x="0" y="0" width="550" height="100" fill="url(#panel-grad-left)"
+                        stroke="url(#theme-border-grad)" stroke-width="3" />
                     <rect x="2" y="2" width="546" height="96" fill="url(#gloss-shine)" stroke="var(--inner-border)"
                         stroke-width="1" />
                     <use href="#corner-accent" x="530" y="5" width="15" height="15"
@@ -310,12 +311,12 @@
                     <g id="striker_arrow" transform="translate(10, 15)">
                         <path id="striker_arrow_path" d="M 0,0 L 10,10 L 0,20 Z" />
                     </g>
-                    <g transform="translate(30, 40)">
+                    <g id="player1_group" transform="translate(30, 40)">
                         <text id="player1" x="0" y="0">PLAYER 1</text>
                         <text id="player1_runs" x="350" y="0" text-anchor="end">0</text>
                         <text id="player1_balls" x="360" y="0" text-anchor="start">(0)</text>
                     </g>
-                    <g transform="translate(30, 85)">
+                    <g id="player2_group" transform="translate(30, 85)">
                         <text id="player2" x="0" y="0">PLAYER 2</text>
                         <text id="player2_runs" x="350" y="0" text-anchor="end">0</text>
                         <text id="player2_balls" x="360" y="0" text-anchor="start">(0)</text>
@@ -329,7 +330,14 @@
                     <rect x="2" y="2" width="496" height="106" fill="none" stroke="rgba(255,255,255,0.2)"
                         stroke-width="1" rx="2" />
                     <rect x="0" y="0" width="500" height="55" fill="url(#gloss-shine)" rx="4" />
-                    <text id="details" x="485" y="25" text-anchor="end">MATCH INFO</text>
+
+                    <!-- Match Info Centered -->
+                    <text id="details" x="250" y="28" text-anchor="middle" font-size="20" font-weight="700"
+                        fill="#ffffff" opacity="0.9" letter-spacing="2px">MATCH INFO</text>
+
+                    <!-- Batting Team Name Left Aligned -->
+
+
                     <g transform="translate(250, 85)">
                         <text id="total_runs" x="-70" y="0" text-anchor="end">0</text>
                         <text id="total_run_hyphen" x="-50" y="-5" text-anchor="middle">-</text>
@@ -339,19 +347,19 @@
                     </g>
                     <!-- Bottom Status Bar -->
                     <g id="commentary_portion" transform="translate(0, 110)">
-                        <path d="M -250 0 L 750 0 L 730 45 L -230 45 Z" class="bg-dark" stroke="url(#theme-border-grad)"
+                        <path d="M -300 0 L 700 0 L 680 45 L -280 45 Z" class="bg-dark" stroke="url(#theme-border-grad)"
                             stroke-width="3" />
-                        <path d="M -248 1 L 748 1 L 729 44 L -229 44 Z" fill="none" stroke="rgba(255,255,255,0.1)"
+                        <path d="M -298 1 L 698 1 L 679 44 L -279 44 Z" fill="none" stroke="rgba(255,255,255,0.1)"
                             stroke-width="1" />
-                        <path d="M -250 0 L 750 0 L 730 45 L -230 45 Z" fill="url(#scanlines)" />
-                        <text id="commentary" x="250" y="32" text-anchor="middle">Match is Starting</text>
+                        <path d="M -300 0 L 700 0 L 680 45 L -280 45 Z" fill="url(#scanlines)" />
+                        <text id="commentary" x="200" y="32" text-anchor="middle">Match is Starting</text>
                     </g>
                 </g>
 
                 <!-- BOWLER PANEL -->
                 <g id="bowler_portion" transform="translate(1210, 0)">
-                    <rect x="0" y="0" width="450" height="100" fill="url(#panel-grad-right)" stroke="url(#theme-border-grad)"
-                        stroke-width="3" />
+                    <rect x="0" y="0" width="450" height="100" fill="url(#panel-grad-right)"
+                        stroke="url(#theme-border-grad)" stroke-width="3" />
                     <rect x="2" y="2" width="446" height="96" fill="url(#gloss-shine)" stroke="var(--inner-border)"
                         stroke-width="1" />
                     <use href="#corner-accent" x="5" y="5" width="15" height="15" />
@@ -376,10 +384,21 @@
                         clip-path="url(#bowl-flag-clip)" />
                     <path d="M 0 0 L 140 0 C 160 0 160 0 160 20 L 160 80 C 160 100 160 100 140 100 L 0 100 Z"
                         fill="url(#gloss-shine)" clip-path="url(#bowl-flag-clip)" />
-                    <rect x="0" y="70" width="160" height="30" fill="rgba(0,0,0,0.85)"
-                        clip-path="url(#bowl-flag-clip)" />
-                    <text id="bowlling_team_name" x="80" y="93" text-anchor="middle"
-                        style="letter-spacing: 1px;">PAK</text>
+                </g>
+
+                <!-- TEAM FULL NAMES (DIAGONAL BOXES NEXT TO COMMENTARY) -->
+                <g id="team_fullnames_portion">
+                    <!-- Left Box -->
+                    <path id="batting_team_box_bg" d="M 60 105 L 410 105 L 430 150 L 80 150 Z" stroke="url(#theme-border-grad)" stroke-width="3" />
+                    <path d="M 62 106 L 408 106 L 428 149 L 82 149 Z" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
+                    <path d="M 60 105 L 410 105 L 430 150 L 80 150 Z" fill="url(#scanlines)" />
+                    <text id="batting_team_name_full" x="245" y="136" text-anchor="middle" font-size="22" font-weight="700" fill="#ffffff" style="letter-spacing: 2px;">BATTING TEAM</text>
+                    
+                    <!-- Right Box -->
+                    <path id="bowling_team_box_bg" d="M 1410 105 L 1760 105 L 1740 150 L 1390 150 Z" stroke="url(#theme-border-grad)" stroke-width="3" />
+                    <path d="M 1412 106 L 1758 106 L 1738 149 L 1392 149 Z" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
+                    <path d="M 1410 105 L 1760 105 L 1740 150 L 1390 150 Z" fill="url(#scanlines)" />
+                    <text id="bowling_team_name_full" x="1575" y="136" text-anchor="middle" font-size="22" font-weight="700" fill="#ffffff" style="letter-spacing: 2px;">BOWLING TEAM</text>
                 </g>
             </g>
         </svg>
@@ -394,9 +413,77 @@
         let crrTimeline = null;
         let commentaryTimeline = null;
 
+        function formatName(firstName, lastName) {
+            if (!firstName && !lastName) return 'UNKNOWN';
+            if (!firstName) return lastName;
+            if (!lastName) return firstName;
+            return firstName.charAt(0).toUpperCase() + '. ' + lastName;
+        }
+
+        function applyTeamTheme(prefix, primaryColors, secondaryColor) {
+            const boxBg = document.getElementById(prefix + "_team_box_bg");
+            const text = document.getElementById(prefix + "_team_name_full");
+            const gradId = prefix + "-team-grad";
+            const defs = document.querySelector("defs");
+
+            if (!boxBg || !text) return;
+
+            // Update text color
+            if (secondaryColor) {
+                text.setAttribute("fill", secondaryColor);
+            }
+
+            // Handle primary color(s) for background
+            let colorsArray = [];
+            if (Array.isArray(primaryColors)) {
+                colorsArray = primaryColors;
+            } else if (typeof primaryColors === 'string') {
+                colorsArray = primaryColors.split(',').map(c => c.trim());
+            }
+
+            if (colorsArray.length > 0) {
+                if (colorsArray.length > 1) {
+                    // Create/Update Gradient
+                    let grad = document.getElementById(gradId);
+                    if (!grad) {
+                        grad = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+                        grad.setAttribute("id", gradId);
+                        grad.setAttribute("x1", "0%");
+                        grad.setAttribute("y1", "0%");
+                        grad.setAttribute("x2", "100%");
+                        grad.setAttribute("y2", "0%");
+                        document.getElementById("team-gradients").appendChild(grad);
+                    }
+                    // Clear existing stops
+                    while (grad.firstChild) grad.removeChild(grad.firstChild);
+                    
+                    // Add new stops
+                    colorsArray.forEach((color, index) => {
+                        const stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+                        stop.setAttribute("offset", (index / (colorsArray.length - 1)) * 100 + "%");
+                        stop.setAttribute("stop-color", color);
+                        grad.appendChild(stop);
+                    });
+                    
+                    boxBg.style.fill = `url(#${gradId})`;
+                } else {
+                    // Solid Fill
+                    boxBg.style.fill = colorsArray[0];
+                }
+            }
+        }
+
         function applyPlayersData(data) {
-            updatePlayer("player1", data.striker.lastName, data.striker.runs, data.striker.balls);
-            updatePlayer("player2", data.nonStriker.lastName, data.nonStriker.runs, data.nonStriker.balls);
+            const strikerName = formatName(data.striker.firstName, data.striker.lastName);
+            const nonStrikerName = formatName(data.nonStriker.firstName, data.nonStriker.lastName);
+            const bowlerName = formatName(data.bowler.firstName, data.bowler.lastName);
+
+            updatePlayer("player1", strikerName, data.striker.runs, data.striker.balls);
+            updatePlayer("player2", nonStrikerName, data.nonStriker.runs, data.nonStriker.balls);
+
+            // Handle disabled state based on status from backend
+            if (data.striker.status === 0) DisabledPlayer(1); else ActivePlayerOne(1);
+            if (data.nonStriker.status === 0) DisabledPlayer(2); else ActivePlayerOne(2);
 
             // Update arrow position from backend striker_side
             if (data.striker_side !== undefined) {
@@ -404,19 +491,34 @@
             }
             updateArrow();
 
-            document.getElementById('bowler').textContent = data.bowler.lastName;
+            document.getElementById('bowler').textContent = bowlerName;
             let overData = Array.isArray(data.bowler.over_state) ? data.bowler.over_state : [];
 
             if (data.inning) {
                 document.getElementById("details").textContent = data.inning.batting_short_name + ' v ' + data.inning.bowling_short_name;
-                document.getElementById("bowlling_team_name").textContent = data.inning.bowling_short_name;
-                document.getElementById("batting_team_name").textContent = data.inning.batting_short_name;
-                document.getElementById("bowling_team_image").setAttribute("href", data.inning.bowling_logo);
-                document.getElementById("batting_team_image").setAttribute("href", data.inning.batting_logo);
+                
+                if (document.getElementById("batting_team_name_full")) {
+                    document.getElementById("batting_team_name_full").textContent = data.inning.batting_name.toUpperCase();
+                }
+                if (document.getElementById("bowling_team_name_full")) {
+                    document.getElementById("bowling_team_name_full").textContent = data.inning.bowling_name.toUpperCase();
+                }
+
+                const getImageUrl = (logo) => {
+                    if (!logo) return '';
+                    if (logo.startsWith('http') || logo.startsWith('/')) return logo;
+                    return `http://localhost:3000/uploads/${logo}`;
+                };
+
+                document.getElementById("bowling_team_image").setAttribute("href", getImageUrl(data.inning.bowling_logo));
+                document.getElementById("batting_team_image").setAttribute("href", getImageUrl(data.inning.batting_logo));
+
+                // Apply dynamic themes
+                applyTeamTheme("batting", data.inning.batting_primary_color, data.inning.batting_secondary_color);
+                applyTeamTheme("bowling", data.inning.bowling_primary_color, data.inning.bowling_secondary_color);
             }
 
             drawOverSummary(overData);
-            ActivePlayer();
         }
 
         function applyScoreboardData(data) {
@@ -553,17 +655,42 @@
 
         function DisabledPlayer(index) {
             const prefix = (index === 1) ? "player1" : "player2";
-            document.getElementById(prefix).classList.add("disabled");
-            document.getElementById(prefix + "_runs").classList.add("disabled");
-            document.getElementById(prefix + "_balls").classList.add("disabled");
+            const el = document.getElementById(prefix);
+
+            // Avoid re-triggering if already disabled
+            if (el && el.classList.contains("disabled")) return;
+
+            if (el) el.classList.add("disabled");
+            const rel = document.getElementById(prefix + "_runs");
+            if (rel) rel.classList.add("disabled");
+            const bel = document.getElementById(prefix + "_balls");
+            if (bel) bel.classList.add("disabled");
+
+            // Zoom animation (3 times) - ONLY NAME
+            const nameEl = document.getElementById(prefix);
+            if (nameEl) {
+                gsap.to(nameEl, {
+                    scale: 1.25,
+                    duration: 0.3,
+                    repeat: 5,
+                    yoyo: true,
+                    transformOrigin: "left center",
+                    ease: "power2.inOut"
+                });
+            }
         }
 
-        function ActivePlayer() {
-            ["player1", "player2"].forEach(p => {
-                document.getElementById(p).classList.remove("disabled");
-                document.getElementById(p + "_runs").classList.remove("disabled");
-                document.getElementById(p + "_balls").classList.remove("disabled");
-            });
+        function ActivePlayerOne(index) {
+            const prefix = (index === 1) ? "player1" : "player2";
+            const el = document.getElementById(prefix);
+            if (el) {
+                el.classList.remove("disabled");
+                gsap.set(el, { scale: 1 });
+            }
+            const rel = document.getElementById(prefix + "_runs");
+            if (rel) rel.classList.remove("disabled");
+            const bel = document.getElementById(prefix + "_balls");
+            if (bel) bel.classList.remove("disabled");
         }
 
         // =============================================
@@ -582,7 +709,7 @@
             const container = document.getElementById('scoreboard-container');
             const shine = document.getElementById('shine-sweep');
             const sections = ['#score_portion', '#players_portion', '#bowler_portion', '#batting_team_portion', '#bowling_team_portion'];
-            
+
             // Clear any lingering GSAP props before starting fresh
             gsap.set([...sections, 'text', '#overSummary rect', '#overSummary text'], { clearProps: "all" });
             gsap.killTweensOf([container, shine, ...sections, 'text', '#overSummary rect', '#overSummary text']);
@@ -598,21 +725,21 @@
             currentTimeline
                 // 1. Center base rises with heavy impact
                 .from('#score_portion', { y: "+=80", opacity: 0, duration: 0.6, ease: "back.out(1.4)" })
-                
+
                 // 2. Play panels slide outwards gracefully
                 .from('#players_portion', { x: "+=60", opacity: 0, duration: 0.6, ease: "power3.out" }, "-=0.35")
                 .from('#bowler_portion', { x: "-=60", opacity: 0, duration: 0.6, ease: "power3.out" }, "-=0.6")
-                
+
                 // 3. Flags snap/burst into position at the edges
                 .from('#batting_team_portion', { scale: 0.5, opacity: 0, duration: 0.5, transformOrigin: "80% 50%", ease: "back.out(2)" }, "-=0.3")
                 .from('#bowling_team_portion', { scale: 0.5, opacity: 0, duration: 0.5, transformOrigin: "20% 50%", ease: "back.out(2)" }, "-=0.5")
-                
+
                 // 4. Text/Numbers reveal sequentially with a fluid liquid-style pop
                 .from('text', { opacity: 0, y: "+=15", duration: 0.4, stagger: 0.008, ease: "power2.out" }, "-=0.4")
-                
+
                 // 5. Over summary balls aggressively pop in
                 .from('#overSummary rect, #overSummary text', { opacity: 0, scale: 0, transformOrigin: "50% 50%", duration: 0.35, stagger: 0.03, ease: "back.out(2.5)" }, "-=0.3")
-                
+
                 // 6. Premium broadcast shine sweeps across the entire UI
                 .to(shine, { opacity: 0.8, x: "250%", duration: 1.1, ease: "power2.inOut" }, "-=0.6")
                 .to(shine, { opacity: 0, duration: 0.2 }, "-=0.2");
@@ -626,9 +753,9 @@
             const sections = ['#score_portion', '#players_portion', '#bowler_portion', '#batting_team_portion', '#bowling_team_portion'];
 
             currentTimeline = gsap.timeline({
-                onComplete: () => { 
-                    isVisible = false; 
-                    isAnimating = false; 
+                onComplete: () => {
+                    isVisible = false;
+                    isAnimating = false;
                     gsap.set(container, { visibility: 'hidden' });
                     // Clear all GSAP inline styles so the graphic resets to its raw SVG state
                     gsap.set([...sections, 'text', '#overSummary rect', '#overSummary text'], { clearProps: "all" });
@@ -654,7 +781,7 @@
         window.addEventListener('message', (e) => {
             const msg = e.data;
             console.log("Scoreboard Received Message:", msg);
-            
+
             if (msg === 'HIDE' || msg.type === 'HIDE' || msg.type === 'hide') {
                 hide();
             } else if (msg.type === 'SHOW' || msg.type === 'show' || msg.type === 'UPDATE' || msg.type === 'update') {
@@ -662,7 +789,7 @@
                     if (msg.data.playersData) applyPlayersData(msg.data.playersData);
                     if (msg.data.scoreboardData) applyScoreboardData(msg.data.scoreboardData);
                 }
-                
+
                 if (msg.type === 'SHOW' || msg.type === 'show') {
                     show();
                 }

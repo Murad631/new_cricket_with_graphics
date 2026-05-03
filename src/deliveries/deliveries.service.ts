@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, Not, IsNull } from 'typeorm';
+import { Repository, In, Not, IsNull, DataSource } from 'typeorm';
 import { Delivery } from '../Entity/deliveries.entity';
 import { Wicket } from '../Entity/wicket.entity';
 import { ScoreboardService } from '../scoreboard/scoreboard.service';
@@ -28,6 +28,7 @@ export class DeliveryService {
     @InjectRepository(Player) private readonly playerRepo: Repository<Player>,
     private readonly eventEmitter: EventEmitter2,
     private readonly scoreboardService: ScoreboardService,
+    private dataSource: DataSource
   ) { }
 
   async deliveryRecording(dto: any) {
@@ -39,174 +40,150 @@ export class DeliveryService {
       const inningsId = state.currentInningsId;
       if (!matchId || !inningsId) throw new BadRequestException("No active match/inning found");
 
-      // Slot-based Identification (Fixed Slots)
-      const slot1MSId = state.strikerSquadId;
-      const slot2MSId = state.nonStrikerSquadId;
-      const bowlerMSId = state.bowlerSquadId;
-
-      const strikerIndex = state.striker_index ?? 1;
-      const striker = strikerIndex === 1 ? slot1MSId : slot2MSId;
-      const nonStriker = strikerIndex === 1 ? slot2MSId : slot1MSId;
-      const bowler = bowlerMSId;
+      const striker = (state.striker_index === 1 ? state.strikerSquadId : state.nonStrikerSquadId) as number;
+      const nonStriker = (state.striker_index === 1 ? state.nonStrikerSquadId : state.strikerSquadId) as number;
+      const bowler = state.bowlerSquadId as number;
 
       if (!striker || !nonStriker || !bowler) {
-        throw new BadRequestException("Active players (striker, non-striker, and bowler) must be set");
+        throw new BadRequestException("Striker, Non-Striker, and Bowler must be set before recording a delivery");
       }
 
-      // --- 1. Fetch or Create Batting Stats ---
-      let strikerBatting = await this.batting.findOne({ where: { inningsId, player_id: striker, status: 1 } });
-      if (!strikerBatting) {
-        strikerBatting = await this.batting.save(this.batting.create({
-          matchId, inningsId, player_id: striker, runs: 0, balls: 0, fours: 0, sixes: 0, index: 1, status: 1
-        }));
+      // --- 1. Validations ---
+      const isWicket = dto.iswicket === "W" || dto.iswicket === true;
+      let playerOutId: number | null = null;
+      if (isWicket) {
+        playerOutId = dto.wicketType === WicketType.RUN_OUT ? Number(dto.out_player) : striker;
+
+        // Validation: Player must be on the crease to be out
+        if (playerOutId !== striker && playerOutId !== nonStriker) {
+          throw new BadRequestException("The dismissed player is not currently at the crease.");
+        }
+
+        // Validation: No duplicate wickets for the same player in this innings
+        const existingWicket = await this.wicketRepo.findOne({ where: { inningsId, outBatsmanSquadId: playerOutId } });
+        if (existingWicket) {
+          throw new BadRequestException("This player is already marked as out in this innings.");
+        }
       }
 
-      let nonStrikerBatting = await this.batting.findOne({ where: { inningsId, player_id: nonStriker, status: 1 } });
-      if (!nonStrikerBatting) {
-        nonStrikerBatting = await this.batting.save(this.batting.create({
-          matchId, inningsId, player_id: nonStriker, runs: 0, balls: 0, fours: 0, sixes: 0, index: 2, status: 1
-        }));
+      // Fetch Batting Stats
+      let strikerBat = await this.batting.findOne({ where: { inningsId, player_id: striker, status: 1 } });
+      let nonStrikerBat = await this.batting.findOne({ where: { inningsId, player_id: nonStriker, status: 1 } });
+
+      if (!strikerBat || !nonStrikerBat) {
+        throw new BadRequestException("Active batting records not found for the players at the crease.");
       }
 
-      // --- 2. Delivery Logic ---
-      // --- 2. Delivery Logic ---
+      // --- 2. Delivery Logic (No DB writes yet) ---
       const rawRun = Number(dto.run ?? 0);
       const rawExtra = Number(dto.extraRun ?? dto.exrtaRun ?? 0);
+      const physicalRuns = rawRun > 0 ? rawRun : rawExtra; // Safely get the runs sent in payload
+      const hasPlayerAccount = dto.player_account == 1 || dto.player_account === true || dto.player_account === 'true';
       const kind = this.getDeliveryKind(dto.extraType);
-      const isWicket = dto.iswicket === "W" || dto.iswicket === true;
       const isLegalBall = kind !== DeliveryKind.WIDE && kind !== DeliveryKind.NOBALL;
 
-      let teamRunDelta = rawRun + rawExtra;
-      let batsmanRunDelta = rawRun;
-      let crossingRuns = rawRun; // Used for calculating strike rotation
-
-      if (kind === DeliveryKind.NOBALL || kind === DeliveryKind.WIDE) {
-        // Guarantee at least 1 penalty run for the team
-        if (teamRunDelta === 0) teamRunDelta = 1;
-
-        if (kind === DeliveryKind.WIDE) {
-          batsmanRunDelta = 0; // Wides never give batsman runs
-          if (rawExtra === 0 && rawRun > 0) crossingRuns = rawRun - 1;
-        } else if (kind === DeliveryKind.NOBALL) {
-          if (rawExtra === 0 && rawRun > 0) {
-            batsmanRunDelta = rawRun - 1;
-            crossingRuns = rawRun - 1;
-          } else {
-            batsmanRunDelta = rawExtra > 0 ? rawRun : 0;
-            crossingRuns = rawRun;
-          }
-        }
-      } else if (kind === DeliveryKind.BYE || kind === DeliveryKind.LEG_BYE) {
-        batsmanRunDelta = 0; // Byes/LegByes never give batsman runs
-        crossingRuns = rawRun;
-      }
-
+      let teamRunDelta = 0;
+      let batsmanRunDelta = 0;
       let teamExtraDelta = 0;
-      if (kind === DeliveryKind.WIDE || kind === DeliveryKind.NOBALL) {
-        teamExtraDelta = teamRunDelta - batsmanRunDelta;
+
+      if (kind === DeliveryKind.WIDE) {
+        teamRunDelta = physicalRuns + 1; // 1 penalty + runs ran
+        batsmanRunDelta = hasPlayerAccount ? physicalRuns : 0; // Credit striker if player_account is provided
+        teamExtraDelta = teamRunDelta - batsmanRunDelta; // Remaining are extras
+      } else if (kind === DeliveryKind.NOBALL) {
+        teamRunDelta = physicalRuns + 1; // 1 penalty + runs ran
+        batsmanRunDelta = hasPlayerAccount ? physicalRuns : 0; // Credit striker if player_account is provided
+        teamExtraDelta = teamRunDelta - batsmanRunDelta; // Remaining are extras
       } else if (kind === DeliveryKind.BYE || kind === DeliveryKind.LEG_BYE) {
-        teamExtraDelta = teamRunDelta;
+        teamRunDelta = physicalRuns; // Just the runs ran, no default penalty
+        batsmanRunDelta = 0; // Striker ALWAYS gets 0 runs
+        teamExtraDelta = physicalRuns; // All are extras
+      } else {
+        teamRunDelta = physicalRuns; // Legal ball
+        batsmanRunDelta = physicalRuns;
+        teamExtraDelta = 0;
       }
 
       const bowlerRunDelta = (kind === DeliveryKind.BYE || kind === DeliveryKind.LEG_BYE) ? 0 : teamRunDelta;
-      const bowlerExtraDelta = (kind === DeliveryKind.WIDE || kind === DeliveryKind.NOBALL) ? teamRunDelta - batsmanRunDelta : 0;
+      const bowlerExtraDelta = (kind === DeliveryKind.WIDE || kind === DeliveryKind.NOBALL) ? teamExtraDelta : 0;
       const ballIndexDelta = isLegalBall ? 1 : 0;
       let bowlerWicketDelta = 0;
 
       const symbol = this.getBallSymbol(teamRunDelta, kind, isWicket);
 
-      // --- 3. Handle Wicket ---
+      // --- 3. Data Persistence (DB writes start here) ---
+      let savedWicketId: number | undefined = undefined;
       let wicketInfo: any = null;
-      if (isWicket) {
-        const playerOutId = dto.wicketType === WicketType.RUN_OUT ? (dto.out_player === 2 ? nonStriker : striker) : striker;
-        const outPlayerBatting = playerOutId === striker ? strikerBatting : nonStrikerBatting;
-        
-        wicketInfo = {
-          playerOutId, outPlayer: playerOutId === slot1MSId ? 1 : 2, wicketType: dto.wicketType,
-          runs: (outPlayerBatting.runs ?? 0) + (playerOutId === striker ? batsmanRunDelta : 0),
-          balls: (outPlayerBatting.balls ?? 0) + (playerOutId === striker && isLegalBall ? 1 : 0),
-        };
 
-        await this.batting.update(wicketInfo.playerOutId, {
+      if (isWicket && playerOutId) {
+        const outPlayerBatting = playerOutId === striker ? strikerBat : nonStrikerBat;
+        const isBowlerWicket = [WicketType.BOWLED, WicketType.CAUGHT, WicketType.LBW, WicketType.STUMPED, WicketType.HIT_WICKET].includes(dto.wicketType);
+        if (isBowlerWicket) bowlerWicketDelta = 1;
+
+        const wicket = await this.wicketRepo.save(this.wicketRepo.create({
+          inningsId, type: dto.wicketType, outBatsmanSquadId: playerOutId,
+          creditedBowlerSquadId: isBowlerWicket ? bowler : undefined,
+          isBowlerWicket, teamScore: (state.total_run ?? 0) + teamRunDelta
+        }));
+        savedWicketId = wicket.id;
+
+        await this.matchSquadRepo.update(playerOutId, { status: 'out' });
+        await this.batting.update(outPlayerBatting.id, {
           status: 0,
-          runs: (outPlayerBatting.runs ?? 0) + (playerOutId === striker ? batsmanRunDelta : 0),
-          balls: (outPlayerBatting.balls ?? 0) + (playerOutId === striker && isLegalBall ? 1 : 0),
-          fours: (outPlayerBatting.fours ?? 0) + (playerOutId === striker && batsmanRunDelta === 4 ? 1 : 0),
-          sixes: (outPlayerBatting.sixes ?? 0) + (playerOutId === striker && batsmanRunDelta === 6 ? 1 : 0)
+          runs: outPlayerBatting.runs + (playerOutId === striker ? batsmanRunDelta : 0),
+          balls: outPlayerBatting.balls + (playerOutId === striker && isLegalBall ? 1 : 0),
+          fours: outPlayerBatting.fours + (playerOutId === striker && batsmanRunDelta === 4 ? 1 : 0),
+          sixes: outPlayerBatting.sixes + (playerOutId === striker && batsmanRunDelta === 6 ? 1 : 0)
         });
 
-        // Emit wicket_dismissal graphic
-        const outSquad = await this.matchSquadRepo.findOne({ where: { id: wicketInfo.playerOutId } });
-        const outPlayerInfo = outSquad ? await this.playerRepo.findOne({ where: { id: outSquad.playerId } }) : null;
-        const bowlerSquad = await this.matchSquadRepo.findOne({ where: { id: bowler } });
-        const bowlerPlayerInfo = bowlerSquad ? await this.playerRepo.findOne({ where: { id: bowlerSquad.playerId } }) : null;
+        wicketInfo = {
+          playerOutId, outPlayer: playerOutId === state.strikerSquadId ? 1 : 2, wicketType: dto.wicketType,
+          runs: outPlayerBatting.runs + (playerOutId === striker ? batsmanRunDelta : 0),
+          balls: outPlayerBatting.balls + (playerOutId === striker && isLegalBall ? 1 : 0)
+        };
+
+        // Emit Graphic
+        const getP = async (id) => {
+          const ms = await this.matchSquadRepo.findOne({ where: { id } });
+          return ms ? await this.playerRepo.findOne({ where: { id: ms.playerId } }) : null;
+        };
+        const outPlayerInfo = await getP(playerOutId);
+        const bowlerPlayerInfo = await getP(bowler);
 
         this.eventEmitter.emit('graphic_event', {
           type: 'show', graphic: 'wicket_dismissal',
           data: {
-            firstName: outPlayerInfo?.firstName?.toUpperCase(),
-            lastName: outPlayerInfo?.lastName?.toUpperCase(),
-            runs: wicketInfo.runs, balls: wicketInfo.balls,
-            fours: (outPlayerBatting.fours ?? 0) + (playerOutId === striker && batsmanRunDelta === 4 ? 1 : 0),
-            sixes: (outPlayerBatting.sixes ?? 0) + (playerOutId === striker && batsmanRunDelta === 6 ? 1 : 0),
+            firstName: outPlayerInfo?.firstName?.toUpperCase(), lastName: outPlayerInfo?.lastName?.toUpperCase(),
+            runs: wicketInfo.runs, balls: wicketInfo.balls, fours: outPlayerBatting.fours + (playerOutId === striker && batsmanRunDelta === 4 ? 1 : 0),
+            sixes: outPlayerBatting.sixes + (playerOutId === striker && batsmanRunDelta === 6 ? 1 : 0),
             strikeRate: wicketInfo.balls > 0 ? ((wicketInfo.runs / wicketInfo.balls) * 100).toFixed(1) : "0.0",
-            wicketType: dto.wicketType,
-            bowlerName: bowlerPlayerInfo?.lastName?.toUpperCase(),
-            dotBalls: 0
+            wicketType: dto.wicketType, bowlerName: bowlerPlayerInfo?.lastName?.toUpperCase(), dotBalls: 0
           }
         });
       }
 
-      // --- 4. Update Striker (if not out) ---
-      if (!isWicket || wicketInfo.playerOutId !== striker) {
-        await this.batting.update(strikerBatting.id, {
-          runs: (strikerBatting.runs ?? 0) + batsmanRunDelta,
-          balls: (strikerBatting.balls ?? 0) + (isLegalBall ? 1 : 0),
-          fours: (strikerBatting.fours ?? 0) + (batsmanRunDelta === 4 ? 1 : 0),
-          sixes: (strikerBatting.sixes ?? 0) + (batsmanRunDelta === 6 ? 1 : 0),
+      // Update Striker (if still in)
+      if (!isWicket || playerOutId !== striker) {
+        await this.batting.update(strikerBat.id, {
+          runs: strikerBat.runs + batsmanRunDelta,
+          balls: strikerBat.balls + (isLegalBall ? 1 : 0),
+          fours: strikerBat.fours + (batsmanRunDelta === 4 ? 1 : 0),
+          sixes: strikerBat.sixes + (batsmanRunDelta === 6 ? 1 : 0),
         });
       }
 
-      // --- 5. Update Over Summary ---
-      const lastOver = await this.overSummary.findOne({ 
-        where: { matchId, inningsId }, 
-        order: { overNumber: 'DESC' } 
-      });
-
+      // Over Summary
+      const lastOver = await this.overSummary.findOne({ where: { matchId, inningsId }, order: { overNumber: 'DESC' } });
       let currentOver: any = null;
-
-      // If the absolutely last over of the innings is active...
       if (lastOver && lastOver.status === 1) {
-        if (lastOver.player_id === bowler) {
-          // It belongs to the current bowler, so we continue it
-          currentOver = lastOver;
-          // Safety: If it already has 6+ legal balls but status was stuck at 1, force close it
-          if ((currentOver.ball_index ?? 0) >= 6) {
-            await this.overSummary.update(currentOver.id, { status: 0 });
-            currentOver = null;
-          }
-        } else {
-          // It belongs to a DIFFERENT bowler (e.g. bowling change mid-over, or old active over stuck)
-          // Force close it so we can start a fresh over for the new bowler
-          await this.overSummary.update(lastOver.id, { status: 0 });
-        }
+        if (lastOver.player_id === bowler && (lastOver.ball_index ?? 0) < 6) currentOver = lastOver;
+        else await this.overSummary.update(lastOver.id, { status: 0 });
       }
 
       if (!currentOver) {
-        // Safety cleanup: close ALL active overs for this innings just to be sure there's no DB junk
-        await this.overSummary.update({ matchId, inningsId, status: 1 }, { status: 0 });
-
         currentOver = await this.overSummary.save(this.overSummary.create({
-          matchId, 
-          inningsId, 
-          player_id: bowler, 
-          overNumber: (lastOver?.overNumber ?? 0) + 1, 
-          balls: [], 
-          ball_index: 0, 
-          runs: 0, 
-          extra: 0, 
-          wickets: 0, 
-          status: 1
+          matchId, inningsId, player_id: bowler, overNumber: (lastOver?.overNumber ?? 0) + 1,
+          balls: [], ball_index: 0, runs: 0, extra: 0, wickets: 0, status: 1
         }));
       }
 
@@ -214,64 +191,91 @@ export class DeliveryService {
       await this.overSummary.update(currentOver.id, {
         balls: [...(currentOver.balls ?? []), symbol], ball_index: updatedBallIndex,
         runs: (currentOver.runs ?? 0) + bowlerRunDelta, extra: (currentOver.extra ?? 0) + bowlerExtraDelta,
-        wickets: (currentOver.wickets ?? 0) + bowlerWicketDelta, status: updatedBallIndex >= 6 ? 0 : 1,
+        wickets: (currentOver.wickets ?? 0) + bowlerWicketDelta, status: updatedBallIndex >= 6 ? 0 : 1
       });
 
-      // --- 6. Final State & Rotation ---
+      // Scoreboard State
       const finalTeamRun = (state.total_run ?? 0) + teamRunDelta;
       const finalTeamWickets = (state.total_wickets ?? 0) + (isWicket ? 1 : 0);
-      let nextStrikerIndex = strikerIndex;
-      
-      // Strike rotates when batsmen physically cross
-      if (crossingRuns % 2 === 1) nextStrikerIndex = strikerIndex === 1 ? 2 : 1;
-      
       const isOverEnd = updatedBallIndex >= 6;
-      if (isOverEnd) nextStrikerIndex = nextStrikerIndex === 1 ? 2 : 1;
 
       await this.scoreboardService.update(1, {
         total_run: finalTeamRun, total_wickets: finalTeamWickets, total_extra: (state.total_extra ?? 0) + teamExtraDelta,
-        currentOverNumber: isOverEnd ? currentOver.overNumber : currentOver.overNumber - 1,
-        striker_index: nextStrikerIndex
+        currentOverNumber: isOverEnd ? currentOver.overNumber : currentOver.overNumber - 1
       });
 
-      // Clear bowler on over end using QueryBuilder (null assignment)
-      if (isOverEnd) {
-        await this.scoreboardService.clearBowler();
-      }
+      // Delivery Record
+      const lastDelivery = await this.deliveryRepo.findOne({
+        where: { inningsId },
+        order: { seq: 'DESC' }
+      });
+      const deliverySeq = (lastDelivery?.seq || 0) + 1;
+      await this.deliveryRepo.save(this.deliveryRepo.create({
+        inningsId, seq: deliverySeq, overNumber: currentOver.overNumber - 1, ballIndex: updatedBallIndex - 1,
+        kind, isLegal: isLegalBall, strikerSquadId: striker, nonStrikerSquadId: nonStriker, bowlerSquadId: bowler,
+        runsOffBat: batsmanRunDelta, total_runs: teamRunDelta, symbol, wicketId: savedWicketId,
+        wideRuns: kind === DeliveryKind.WIDE ? teamExtraDelta : 0,
+        noBallRuns: kind === DeliveryKind.NOBALL ? teamExtraDelta : 0,
+        byeRuns: kind === DeliveryKind.BYE ? teamExtraDelta : 0,
+        legByeRuns: kind === DeliveryKind.LEG_BYE ? teamExtraDelta : 0,
+      }));
 
-      // --- 7. Graphics (fetch FRESH data after all updates) ---
-      // Use status:1 to get only active batting records, order by id DESC to get latest
-      const b1 = await this.batting.findOne({ where: { inningsId, player_id: slot1MSId, status: 1 }, order: { id: 'DESC' } });
-      const b2 = await this.batting.findOne({ where: { inningsId, player_id: slot2MSId, status: 1 }, order: { id: 'DESC' } });
-      const getP = async (msId) => {
-        const ms = await this.matchSquadRepo.findOne({ where: { id: msId } });
+      if (isOverEnd) await this.scoreboardService.clearBowler();
+
+      // Refresh data for Graphics
+      const b1 = await this.batting.findOne({ where: { inningsId, player_id: state.strikerSquadId } });
+      const b2 = await this.batting.findOne({ where: { inningsId, player_id: state.nonStrikerSquadId } });
+      const getPInfo = async (id) => {
+        const ms = await this.matchSquadRepo.findOne({ where: { id } });
         return ms ? await this.playerRepo.findOne({ where: { id: ms.playerId } }) : null;
       };
-      const p1 = await getP(slot1MSId), p2 = await getP(slot2MSId), pb = await getP(bowler);
+      const p1 = await getPInfo(state.strikerSquadId), p2 = await getPInfo(state.nonStrikerSquadId), pb = await getPInfo(bowler);
 
       const graphicData = {
         playersData: {
-          striker: { id: slot1MSId, firstName: p1?.firstName, lastName: p1?.lastName, runs: b1?.runs ?? 0, balls: b1?.balls ?? 0, isStriker: nextStrikerIndex === 1 },
-          nonStriker: { id: slot2MSId, firstName: p2?.firstName, lastName: p2?.lastName, runs: b2?.runs ?? 0, balls: b2?.balls ?? 0, isStriker: nextStrikerIndex === 2 },
+          striker: { id: state.strikerSquadId, firstName: p1?.firstName, lastName: p1?.lastName, runs: b1?.runs ?? 0, balls: b1?.balls ?? 0, isStriker: state.striker_index === 1, status: b1?.status ?? 1 },
+          nonStriker: { id: state.nonStrikerSquadId, firstName: p2?.firstName, lastName: p2?.lastName, runs: b2?.runs ?? 0, balls: b2?.balls ?? 0, isStriker: state.striker_index === 2, status: b2?.status ?? 1 },
           bowler: { id: bowler, firstName: pb?.firstName, lastName: pb?.lastName, total_balls: updatedBallIndex, over_state: [...(currentOver.balls ?? []), symbol] },
-          striker_side: nextStrikerIndex
+          striker_side: state.striker_index
         },
         scoreboardData: {
-          totalRun: finalTeamRun, totalWicket: finalTeamWickets,
-          overs: isOverEnd ? currentOver.overNumber : (currentOver.overNumber - 1) + (updatedBallIndex / 10),
-          player1_runs: b1?.runs ?? 0, player2_runs: b2?.runs ?? 0, onStrike: nextStrikerIndex,
-          ball_state: [...(currentOver.balls ?? []), symbol], wicket: wicketInfo
+          totalRun: finalTeamRun, totalWicket: finalTeamWickets, overs: isOverEnd ? currentOver.overNumber : (currentOver.overNumber - 1) + (updatedBallIndex / 10),
+          player1_runs: b1?.runs ?? 0, player2_runs: b2?.runs ?? 0, onStrike: state.striker_index, ball_state: [...(currentOver.balls ?? []), symbol], wicket: wicketInfo
         }
       };
 
       this.eventEmitter.emit('graphic_event', { type: 'show', graphic: 'scoreboard', data: graphicData });
       this.eventEmitter.emitAsync('scoreboard.updated', graphicData.scoreboardData);
-      
       this.getReaminingOverAndRuns(matchId, finalTeamRun, currentOver.overNumber, updatedBallIndex, dto.message);
+
+      await this.autoStrikeRotation(physicalRuns, isOverEnd);
+
       return graphicData.scoreboardData;
     } catch (e) {
       console.error("deliveryRecording Error:", e);
       throw new BadRequestException(e.message);
+    }
+  }
+
+  private async autoStrikeRotation(physicalRuns: number, isOverEnd: boolean) {
+    let shouldSwap = false;
+
+    // 1. First apply RUN rule
+    // Odd runs rotate the strike, even runs do not
+    if (physicalRuns % 2 !== 0) {
+      shouldSwap = !shouldSwap;
+    }
+
+    // 2. THEN apply OVER END rule
+    // Over end always forces an additional swap
+    if (isOverEnd) {
+      shouldSwap = !shouldSwap;
+    }
+
+    // If final result is true, we trigger the switch
+    if (shouldSwap) {
+      const result = await this.scoreboardService.switchPlayers();
+      this.eventEmitter.emitAsync('switch-player', result);
     }
   }
 
@@ -292,24 +296,19 @@ export class DeliveryService {
     return run.toString();
   }
 
+
   async cleanAll() {
-    await this.deliveryRepo.query('SET FOREIGN_KEY_CHECKS = 0');
-    await this.deliveryRepo.query('TRUNCATE TABLE deliveries');
-    await this.deliveryRepo.query('TRUNCATE TABLE innings');
-    await this.deliveryRepo.query('TRUNCATE TABLE match_batting');
-    await this.deliveryRepo.query('TRUNCATE TABLE over_summary');
-    await this.deliveryRepo.query('TRUNCATE TABLE wickets');
-    await this.deliveryRepo.query('TRUNCATE TABLE scoreboard_state');
-    await this.deliveryRepo.query('SET FOREIGN_KEY_CHECKS = 1');
-    return { message: "All match tables truncated successfully" };
+    await this.dataSource.query(`SET FOREIGN_KEY_CHECKS = 0`);
+
+    await this.dataSource.query(`TRUNCATE TABLE wickets`);
+    await this.dataSource.query(`TRUNCATE TABLE deliveries`);
+    await this.dataSource.query(`TRUNCATE TABLE match_batting`);
+    await this.dataSource.query(`TRUNCATE TABLE over_summary`);
+
+    await this.dataSource.query(`SET FOREIGN_KEY_CHECKS = 1`);
   }
 
-  async getTimeline(matchId: number) {
-    const innings = await this.inningsRepo.find({ where: { matchId } });
-    const innIds = innings.map(i => i.id);
-    if (innIds.length === 0) return [];
-    return this.deliveryRepo.find({ where: { inningsId: In(innIds) }, order: { seq: 'ASC' } });
-  }
+
 
   async getReaminingOverAndRuns(matchID: number, totalRuns: number, overs: number, index: number, showMessage: number) {
     try {
@@ -329,7 +328,7 @@ export class DeliveryService {
           if (showMessage === 1) this.eventEmitter.emitAsync('match_state_message', message);
         }
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   async getRunRates(matchId: number) {
