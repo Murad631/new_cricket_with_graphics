@@ -22,8 +22,8 @@ export class TeamController {
       if (logo) data.logo = logo.path;
       return await this.teamService.create(data);
     } catch (err) {
-      throw new InternalServerErrorException(err?.message || 'Failed to create team');
-    }
+    }      throw new InternalServerErrorException('Failed to create team');
+
   }
 
   @Get('list')
@@ -31,7 +31,7 @@ export class TeamController {
     try {
       return await this.teamService.findAll();
     } catch (err) {
-      throw new InternalServerErrorException(err?.message || 'Failed to fetch teams');
+      throw new InternalServerErrorException('Failed to fetch teams');
     }
   }
 
